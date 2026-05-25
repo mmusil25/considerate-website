@@ -11,7 +11,7 @@ variable "environment" {
 }
 
 variable "instance_type" {
-  default = "t3.micro"
+  default = "t3.small"
 }
 
 variable "db_instance_class" {

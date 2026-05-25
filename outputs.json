@@ -2,12 +2,12 @@
   "app_public_dns": {
     "sensitive": false,
     "type": "string",
-    "value": "ec2-18-117-106-181.us-east-2.compute.amazonaws.com"
+    "value": "ec2-3-149-29-20.us-east-2.compute.amazonaws.com"
   },
   "app_public_ip": {
     "sensitive": false,
     "type": "string",
-    "value": "18.117.106.181"
+    "value": "3.149.29.20"
   },
   "cloudfront_domain": {
     "sensitive": false,
@@ -27,6 +27,6 @@
   "ssh_command": {
     "sensitive": false,
     "type": "string",
-    "value": "ssh -i ~/.ssh/id_rsa ubuntu@18.117.106.181"
+    "value": "ssh -i ~/.ssh/id_rsa ubuntu@3.149.29.20"
   }
 }
