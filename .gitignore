@@ -2,5 +2,6 @@
 .env
 app/.env
 node_modules/
-.terraformOptimized-photo-of-mark/
+**/.terraform/
+Optimized-photo-of-mark/
 app/.next/
