@@ -3,3 +3,4 @@
 app/.env
 node_modules/
 .terraformOptimized-photo-of-mark/
+app/.next/

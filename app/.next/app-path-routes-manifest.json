@@ -1,7 +1,0 @@
-{
-  "/(frontend)/page": "/",
-  "/(payload)/admin/[[...segments]]/page": "/admin/[[...segments]]",
-  "/_global-error/page": "/_global-error",
-  "/_not-found/page": "/_not-found",
-  "/api/[...slug]/route": "/api/[...slug]"
-}
