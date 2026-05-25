@@ -1,6 +1,6 @@
-import { buildConfig } from 'payload/config'
+import { buildConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { slateEditor } from '@payloadcms/richtext-slate'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import Projects from './src/collections/Projects'
 
@@ -25,14 +25,10 @@ const Users = {
 export default buildConfig({
   serverURL: process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
   admin: {
-    user: Users.slug,
+    user: 'users',
   },
-  editor: slateEditor({}),
-  collections: [
-    Users,
-    Media,
-    Projects,
-  ],
+  editor: lexicalEditor(),
+  collections: [Users, Media, Projects],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL,
