@@ -1,3 +1,5 @@
 *.tfstate*
 .env
+app/.env
 node_modules/
+.terraform
