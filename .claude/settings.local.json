@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws --version)",
+      "Bash(aws sts *)",
+      "Bash(aws configure *)",
+      "PowerShell(aws --version)",
+      "PowerShell(aws sts get-caller-identity)",
+      "PowerShell(aws configure get region)",
+      "PowerShell(\"---IDENTITY---\")",
+      "PowerShell(\"---REGION---\")",
+      "PowerShell(Test-NetConnection -ComputerName 3.149.29.20 -Port 22 -WarningAction SilentlyContinue)",
+      "PowerShell(\"=== TCP 22 REACHABILITY ===\")",
+      "Bash(ls -la next.config.*)",
+      "Bash(ls -la payload.config.* src/payload.config.*)",
+      "Bash(cd /c/Users/markr/code/considerate-systems-llc/considerate-website/app/src/app && echo \"=== \\(payload\\) tree ===\" && find \"\\(payload\\)\" -type f | sort && echo \"=== importMap? ===\" && find . -name \"importMap*\" && echo \"=== custom.scss? ===\" && find \"\\(payload\\)\" -name \"*.scss\" 2>/dev/null)",
+      "Read(//c/c/Users/markr/code/considerate-systems-llc/considerate-website/app/src/app/**)"
+    ]
+  }
+}

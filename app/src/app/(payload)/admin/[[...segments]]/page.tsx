@@ -1,18 +1,18 @@
-import configPromise from '@/payload.config'
+// app/src/app/(payload)/admin/[[...segments]]/page.tsx
+import type { Metadata } from 'next'
+import config from '@/payload.config'
+import { RootPage, generatePageMetadata } from '@payloadcms/next/views'
 import { importMap } from '../importMap.js'
-import { RootPage } from '@payloadcms/next/views'
-import { getPayload } from 'payload'
-
-export const dynamic = 'force-dynamic'
 
 type Args = {
   params: Promise<{ segments: string[] }>
   searchParams: Promise<{ [key: string]: string | string[] }>
 }
 
-const Page = async ({ params, searchParams }: Args) => {
-  await getPayload({ config: configPromise, importMap })
-  return RootPage({ config: configPromise, importMap, params, searchParams })
-}
+export const generateMetadata = ({ params, searchParams }: Args): Promise<Metadata> =>
+  generatePageMetadata({ config, params, searchParams })
+
+const Page = ({ params, searchParams }: Args) =>
+  RootPage({ config, params, searchParams, importMap })
 
 export default Page
