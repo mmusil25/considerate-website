@@ -1,0 +1,100 @@
+# ============================================================================
+# Local development stack — the whole platform on your laptop, no AWS needed.
+#
+#   cd docker && cp .env.example .env && docker compose up --build
+#
+# Services:
+#   db      - Postgres 15 (matches RDS engine version)
+#   minio   - S3-compatible object store, stands in for AWS S3 for media
+#   createbuckets - one-shot job that creates the media bucket in MinIO
+#   app     - the Payload/Next container built from ../app
+#
+# This gives dev/prod parity: the SAME media-upload code path (the
+# @payloadcms/storage-s3 adapter from PROPOSED_APP_CHANGES.md #1) talks to
+# MinIO here and to real S3 in production — only env vars differ.
+#
+# NOTE: `app` depends on the PROPOSED_APP_CHANGES (standalone + S3 adapter).
+#       `db` and `minio` are useful immediately, even before those land.
+# ============================================================================
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: payload
+      POSTGRES_PASSWORD: payload
+      POSTGRES_DB: payload
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payload"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console (http://localhost:9001)
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # one-shot: create the media bucket so the app can upload on first run
+  createbuckets:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb -p local/media &&
+      mc anonymous set download local/media &&
+      echo 'bucket ready';
+      "
+
+  app:
+    build:
+      context: ../app
+      dockerfile: ../docker/Dockerfile
+      args:
+        GIT_SHA: dev
+    depends_on:
+      db:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://payload:payload@db:5432/payload
+      # PAYLOAD_SECRET: stable per-site. For dev a fixed value is fine; in prod
+      # this comes from Secrets Manager (see PROPOSED_APP_CHANGES.md #2).
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:-dev-secret-change-me}
+      PAYLOAD_PUBLIC_SERVER_URL: http://localhost:3000
+      # --- S3 (MinIO) wiring: same env shape as production ---
+      S3_BUCKET: media
+      S3_PREFIX: ""                       # one site locally; in prod e.g. "markmusil/"
+      S3_ENDPOINT: http://minio:9000      # presence of this => MinIO/path-style
+      AWS_REGION: us-east-2
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      # --- Builder.io ---
+      NEXT_PUBLIC_BUILDER_API_KEY: ${NEXT_PUBLIC_BUILDER_API_KEY:-}
+      RUN_MIGRATIONS: "true"
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
+  minio_data:
