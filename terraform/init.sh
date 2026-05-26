@@ -5,7 +5,7 @@ apt-get update
 apt-get install -y curl git build-essential
 
 # Install nvm
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs
 
 # Install pm2 for process management
@@ -28,7 +28,9 @@ EOF
 
 # Install and build
 npm install
+npx payload generate:importmap
 npm run build
+NODE_ENV=production npx payload migrate
 
 # Start with PM2 (from app directory)
 pm2 start npm --name "portfolio" -- start
