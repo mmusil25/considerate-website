@@ -33,3 +33,9 @@ variable "db_password" {
 variable "github_repo" {
   default = "https://github.com/mmusil25/considerate-website.git"
 }
+
+# Per-site prefix inside the shared media bucket (e.g. "markmusil/"). Lets many
+# sites share one bucket without colliding. Empty = bucket root (single site).
+variable "s3_prefix" {
+  default = ""
+}
