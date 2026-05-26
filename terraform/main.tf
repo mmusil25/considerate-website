@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -201,6 +205,86 @@ resource "aws_db_instance" "main" {
   }
 }
 
+# --- Stable PAYLOAD_SECRET (PROPOSED_APP_CHANGES.md #2) ----------------------
+# The secret must be IDENTICAL across every boot/container of a site, or admin
+# sessions are invalidated and encrypted fields become undecryptable. We
+# generate it ONCE and persist it in Secrets Manager; init.sh fetches it at boot
+# instead of running `openssl rand` every time.
+#
+# `random_password` is generated once and stored in Terraform state, so repeat
+# `apply`s keep the same value (it only changes if you taint/replace it).
+resource "random_password" "payload_secret" {
+  length  = 48
+  special = false # keep it shell/.env-safe (alphanumeric) — no quoting needed
+}
+
+resource "aws_secretsmanager_secret" "payload_secret" {
+  name        = "${var.app_name}/payload-secret"
+  description = "Stable PAYLOAD_SECRET for ${var.app_name}. Do NOT rotate without planning: rotating invalidates sessions and breaks encrypted fields."
+}
+
+resource "aws_secretsmanager_secret_version" "payload_secret" {
+  secret_id     = aws_secretsmanager_secret.payload_secret.id
+  secret_string = random_password.payload_secret.result
+}
+
+# --- IAM role for the app instance -------------------------------------------
+# The instance had NO role before. The S3 media plugin (PROPOSED_APP_CHANGES.md
+# #1) needs to read/write the bucket, and boot needs to read the secret above.
+# Prefer this instance role over static keys baked into env.
+data "aws_iam_policy_document" "app_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "app" {
+  name               = "${var.app_name}-app-role"
+  assume_role_policy = data.aws_iam_policy_document.app_assume.json
+
+  tags = {
+    Name = "${var.app_name}-app-role"
+  }
+}
+
+data "aws_iam_policy_document" "app" {
+  # Read/write/delete media objects under this site's prefix.
+  statement {
+    sid       = "MediaObjects"
+    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.assets.arn}/*"]
+  }
+
+  # List is needed for some upload/list operations.
+  statement {
+    sid       = "MediaBucketList"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.assets.arn]
+  }
+
+  # Read the stable PAYLOAD_SECRET at boot.
+  statement {
+    sid       = "ReadPayloadSecret"
+    actions   = ["secretsmanager:GetSecretValue"]
+    resources = [aws_secretsmanager_secret.payload_secret.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "app" {
+  name   = "${var.app_name}-app-policy"
+  role   = aws_iam_role.app.id
+  policy = data.aws_iam_policy_document.app.json
+}
+
+resource "aws_iam_instance_profile" "app" {
+  name = "${var.app_name}-app-profile"
+  role = aws_iam_role.app.name
+}
+
 # EC2 Instance for App
 resource "aws_instance" "app" {
   ami                    = data.aws_ami.ubuntu.id
@@ -208,19 +292,24 @@ resource "aws_instance" "app" {
   subnet_id              = aws_subnet.public_1.id
   vpc_security_group_ids = [aws_security_group.app.id]
   key_name               = aws_key_pair.deployer.key_name
+  iam_instance_profile   = aws_iam_instance_profile.app.name
 
   user_data = base64encode(templatefile("${path.module}/init.sh", {
     db_host     = aws_db_instance.main.endpoint
     db_name     = var.db_name
     db_user     = var.db_username
     db_password = var.db_password
+    aws_region  = var.aws_region
+    s3_bucket   = aws_s3_bucket.assets.id
+    s3_prefix   = var.s3_prefix
+    secret_arn  = aws_secretsmanager_secret.payload_secret.arn
   }))
 
   tags = {
     Name = "${var.app_name}-app"
   }
 
-  depends_on = [aws_db_instance.main]
+  depends_on = [aws_db_instance.main, aws_secretsmanager_secret_version.payload_secret]
 }
 
 # Find latest Ubuntu AMI

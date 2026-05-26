@@ -2,7 +2,7 @@
 set -e
 
 apt-get update
-apt-get install -y curl git build-essential nginx
+apt-get install -y curl git build-essential nginx awscli
 
 # Install nvm
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
@@ -18,12 +18,25 @@ cd /var/www/portfolio
 # Navigate to app directory where package.json actually lives
 cd app
 
+# Fetch the STABLE PAYLOAD_SECRET from Secrets Manager (see main.tf). Must be
+# identical across every boot, or admin sessions/encrypted fields break. The
+# instance role grants secretsmanager:GetSecretValue on this secret's ARN.
+# NOTE: $(...) is evaluated by the shell at boot; Terraform's templatefile only
+# substitutes the ${...} vars (aws_region, secret_arn, s3_bucket, s3_prefix).
+PAYLOAD_SECRET=$(aws secretsmanager get-secret-value \
+  --region ${aws_region} \
+  --secret-id ${secret_arn} \
+  --query SecretString --output text)
+
 # Set environment variables
 cat > .env << EOF
 DATABASE_URL=postgresql://${db_user}:${db_password}@${db_host}/${db_name}
 NODE_ENV=production
-PAYLOAD_SECRET=$(openssl rand -base64 32)
+PAYLOAD_SECRET=$PAYLOAD_SECRET
 PAYLOAD_PUBLIC_SERVER_URL=http://localhost:3000
+S3_BUCKET=${s3_bucket}
+S3_PREFIX=${s3_prefix}
+AWS_REGION=${aws_region}
 EOF
 
 # Install and build
