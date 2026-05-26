@@ -1,6 +1,7 @@
-import config from '@/payload.config'
+import configPromise from '@/payload.config'
 import { importMap } from '../importMap.js'
 import { RootPage } from '@payloadcms/next/views'
+import { getPayload } from 'payload'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,12 +11,8 @@ type Args = {
 }
 
 const Page = async ({ params, searchParams }: Args) => {
-  const resolved = await config
-  console.log('[admin] config type:', typeof resolved)
-  console.log('[admin] admin keys:', Object.keys(resolved?.admin || {}))
-  console.log('[admin] admin.routes:', resolved?.admin?.routes)
-  console.log('[admin] routes:', resolved?.routes)
-  return RootPage({ config, importMap, params, searchParams })
+  await getPayload({ config: configPromise, importMap })
+  return RootPage({ config: configPromise, importMap, params, searchParams })
 }
 
 export default Page
