@@ -6,8 +6,9 @@
 #         next.config.mjs (#3). Until that lands, use the "non-standalone"
 #         fallback noted at the bottom.
 #
-# Build context is the app/ directory. From the repo root:
-#   docker build -f docker/Dockerfile -t considerate-web:dev ./app
+# Build context is the REPO ROOT (the build needs files from BOTH app/ and
+# docker/). From the repo root:
+#   docker build -f docker/Dockerfile -t considerate-web:dev .
 #
 # The image is the reusable TEMPLATE — it contains no site identity and no
 # secrets. Site identity is injected at runtime via env (see .env.example).
@@ -22,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json package-lock.json ./
+COPY app/package.json app/package-lock.json ./
 # `npm ci` = reproducible install from the lockfile (fails if out of sync).
 RUN npm ci
 
@@ -32,7 +33,7 @@ FROM node:22-slim AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY app/ .
 
 # Payload needs the admin import map generated before the Next build.
 # (The repo commits one, but regenerating guarantees it matches the config.)
@@ -80,7 +81,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/public           ./public
 # a "full" image instead — see docker-entrypoint.sh.)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/payload      ./node_modules/.bin/payload
 COPY --from=builder --chown=nextjs:nodejs /app/package.json                   ./package.json
-COPY --chown=nextjs:nodejs docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --chown=nextjs:nodejs docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER nextjs

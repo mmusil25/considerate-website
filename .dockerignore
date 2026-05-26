@@ -1,0 +1,19 @@
+# Build context is the REPO ROOT (so the image can pull from both app/ and
+# docker/). Keep the context small and reproducible — never ship host-built
+# node_modules or local state into the image.
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+**/*.log
+**/*.tsbuildinfo
+.git
+.gitignore
+# things the image never needs
+terraform
+initial-claude-generated-docs
+outputs.json
+*.md
+**/.DS_Store
+dist
+coverage

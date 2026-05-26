@@ -64,10 +64,32 @@ services:
       echo 'bucket ready';
       "
 
+  # one-shot: run DB migrations from the FULL (builder) image, which has the
+  # payload CLI + tsx + source config. The slim standalone runner can't run the
+  # CLI, so we delegate migrations here (the production pattern: a dedicated
+  # migrate task that completes before the app rolls out). See docker-entrypoint.sh.
+  migrate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: builder
+      args:
+        GIT_SHA: dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://payload:payload@db:5432/payload
+      DATABASE_SSL: "false"   # local Postgres has no SSL
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:-dev-secret-change-me}
+    command: ["npx", "payload", "migrate"]
+
   app:
     build:
-      context: ../app
-      dockerfile: ../docker/Dockerfile
+      # context is the repo root so the build can reach both app/ and docker/
+      context: ..
+      dockerfile: docker/Dockerfile
       args:
         GIT_SHA: dev
     depends_on:
@@ -75,8 +97,12 @@ services:
         condition: service_healthy
       createbuckets:
         condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: production
+      RUN_MIGRATIONS: "false"   # the migrate service owns migrations
+      DATABASE_SSL: "false"     # local Postgres has no SSL
       DATABASE_URL: postgresql://payload:payload@db:5432/payload
       # PAYLOAD_SECRET: stable per-site. For dev a fixed value is fine; in prod
       # this comes from Secrets Manager (see PROPOSED_APP_CHANGES.md #2).
@@ -91,7 +117,6 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin
       # --- Builder.io ---
       NEXT_PUBLIC_BUILDER_API_KEY: ${NEXT_PUBLIC_BUILDER_API_KEY:-}
-      RUN_MIGRATIONS: "true"
     ports:
       - "3000:3000"
 
