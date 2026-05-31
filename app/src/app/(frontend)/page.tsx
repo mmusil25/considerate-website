@@ -1,39 +1,53 @@
 import Image from 'next/image'
+import { SiteHeader } from './components/SiteHeader'
+import { NavMenu } from './components/NavMenu'
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex items-center justify-center p-8">
-      <section className="flex items-center gap-16 max-w-4xl w-full sm:flex-row flex-col sm:text-left text-center">
-        <div className="shrink-0">
+    <main style={{ backgroundColor: '#E6F1FB', minHeight: '100vh' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '9px 25px 60px' }}>
+        <SiteHeader />
+
+        <p
+          style={{
+            fontFamily: "'Source Sans 3', 'Source Sans Pro', sans-serif",
+            fontSize: '14px',
+            lineHeight: '1.65',
+            color: '#000000',
+            maxWidth: '451px',
+            margin: '0 auto 40px',
+          }}
+        >
+          Considerate Systems LLC is a single member engineering consulting firm
+          owned and operated by Mark Musil. I specialize in embedded systems,
+          firmware, electrical engineering, web development, and DevOps — a
+          complete technical partner from prototype to deployment.
+          <br />
+          <br />
+          I maintain a dedicated electronics and prototyping facility for rapid
+          development, and offer hourly, retainer, and fixed-price engagements
+          to fit your project&apos;s scope. Hourly engagements typically start
+          at $120/hr.
+          <br />
+          <br />
+          Browse past work below (shared with permission), then schedule a
+          meeting or reach out through the contact form.
+        </p>
+
+        <div style={{ margin: '0 auto 24px', width: 'fit-content' }}>
+          <NavMenu />
+        </div>
+
+        <div style={{ width: '347px', margin: '0 auto' }}>
           <Image
             src="/Mark.jpg"
             alt="Mark Musil"
-            width={340}
-            height={460}
-            className="rounded-2xl object-cover shadow-2xl"
-            priority
+            width={347}
+            height={520}
+            style={{ display: 'block', objectFit: 'cover' }}
           />
         </div>
-        <div className="flex-1">
-          <h1 className="text-5xl font-bold tracking-tight leading-tight mb-2 sm:text-5xl text-4xl">
-            Mark Musil
-          </h1>
-          <p className="text-xl text-gray-500 mb-6">
-            Building things that matter.
-          </p>
-          <p className="text-lg text-gray-600 leading-relaxed mb-8 max-w-md sm:mx-0 mx-auto">
-            I work with small businesses and individuals to build thoughtful,
-            effective solutions. Whether it&apos;s strategy, technology, or something
-            in between — let&apos;s figure it out together.
-          </p>
-          <a
-            href="mailto:mark.r.musil@gmail.com"
-            className="inline-block bg-gray-900 text-white px-8 py-3 rounded-lg font-medium transition-colors hover:bg-gray-700"
-          >
-            Get in touch
-          </a>
-        </div>
-      </section>
+      </div>
     </main>
   )
 }

@@ -6,10 +6,11 @@ const nextConfig = {
   // ships only the node_modules the server actually needs (~150 MB) instead of
   // the full tree (~1 GB+). The docker/Dockerfile runner stage relies on this.
   output: 'standalone',
-  // Restrict file watching to src/ only — prevents EMFILE errors from watchpack
-  // trying to watch /home, /home/mark, etc. on Linux with large home directories.
-  watchOptions: {
-    ignored: ['**/node_modules/**', '**/.git/**', '**/.next/**'],
+  webpack: (config) => {
+    config.watchOptions = {
+      ignored: ['**/node_modules/**', '**/.git/**', '**/.next/**'],
+    }
+    return config
   },
   images: {
     remotePatterns: [
