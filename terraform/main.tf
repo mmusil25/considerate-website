@@ -321,6 +321,7 @@ resource "aws_cloudfront_distribution" "assets" {
 resource "aws_ecr_repository" "app" {
   name                 = var.app_name
   image_tag_mutability = "MUTABLE"
+  force_delete         = true  # allows terraform destroy even when images exist
 
   image_scanning_configuration {
     scan_on_push = true
@@ -558,7 +559,12 @@ resource "aws_ecs_task_definition" "app" {
       # RUN_MIGRATIONS=false: run migrations as a one-off ECS RunTask (off the
       # `builder` image target) before rolling out a new app version, rather than
       # letting N replicas race to migrate the same DB at startup.
-      { name = "RUN_MIGRATIONS",            value = "false" }
+      { name = "RUN_MIGRATIONS",            value = "false" },
+      # HOSTNAME=0.0.0.0: Next.js standalone binds to the system hostname by
+      # default (resolves to the container's bridge IP, not loopback), so the
+      # health check fetch('http://127.0.0.1:3000/') gets ECONNREFUSED. Forcing
+      # 0.0.0.0 makes the server listen on all interfaces including loopback.
+      { name = "HOSTNAME",                  value = "0.0.0.0" }
     ]
 
     secrets = [{
@@ -762,4 +768,20 @@ output "cloudfront_domain" {
 output "payload_secret_arn" {
   description = "Secrets Manager ARN for PAYLOAD_SECRET (needed for manual ECS RunTask migrate calls)"
   value       = aws_secretsmanager_secret.payload_secret.arn
+}
+
+output "app_name" {
+  value = var.app_name
+}
+
+output "public_subnet_1_id" {
+  value = aws_subnet.public_1.id
+}
+
+output "public_subnet_2_id" {
+  value = aws_subnet.public_2.id
+}
+
+output "app_security_group_id" {
+  value = aws_security_group.app.id
 }

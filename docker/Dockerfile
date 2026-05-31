@@ -75,12 +75,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static     ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public           ./public
 
-# Migration tooling: the `payload` CLI is NOT in the standalone bundle, so we
-# bring the payload bin + its deps for the entrypoint's migration step. (In a
-# stricter production setup you'd run migrations as a separate one-off task off
-# a "full" image instead — see docker-entrypoint.sh.)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/payload      ./node_modules/.bin/payload
-COPY --from=builder --chown=nextjs:nodejs /app/package.json                   ./package.json
 COPY --chown=nextjs:nodejs docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
@@ -94,6 +88,20 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 # standalone server entrypoint is server.js at the image root:
 CMD ["node", "server.js"]
+
+# ---- Stage 4: migrator -- runs DB migrations then exits --------------------
+# Built from `builder` which has the full node_modules (including tsx and all
+# transitive deps). Used as a one-off ECS RunTask before rolling out a new app
+# version. Push as a separate :migrator tag alongside :latest.
+FROM builder AS migrator
+
+COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# RUN_MIGRATIONS defaults to true in the entrypoint, so no override needed.
+# CMD ["true"] causes the entrypoint to exit 0 after migrations complete.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["true"]
 
 # ============================================================================
 # FALLBACK (until `output: 'standalone'` is enabled in next.config.mjs):

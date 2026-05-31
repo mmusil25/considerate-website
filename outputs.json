@@ -1,32 +1,52 @@
 {
-  "app_public_dns": {
+  "alb_dns_name": {
     "sensitive": false,
     "type": "string",
-    "value": "ec2-3-149-29-20.us-east-2.compute.amazonaws.com"
+    "value": "considerate-site-alb-1090536380.us-east-2.elb.amazonaws.com"
   },
-  "app_public_ip": {
+  "app_name": {
     "sensitive": false,
     "type": "string",
-    "value": "3.149.29.20"
+    "value": "considerate-site"
+  },
+  "app_security_group_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "sg-04373940fad6e9956"
   },
   "cloudfront_domain": {
     "sensitive": false,
     "type": "string",
-    "value": "d23c3aaj86r78z.cloudfront.net"
+    "value": "d3nzt6a9626bkq.cloudfront.net"
   },
   "db_endpoint": {
     "sensitive": false,
     "type": "string",
-    "value": "portfolio-db.cfqoee6ueqrd.us-east-2.rds.amazonaws.com:5432"
+    "value": "considerate-site-db.cfqoee6ueqrd.us-east-2.rds.amazonaws.com:5432"
+  },
+  "ecr_repository_url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "481923712132.dkr.ecr.us-east-2.amazonaws.com/considerate-site"
+  },
+  "payload_secret_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:secretsmanager:us-east-2:481923712132:secret:considerate-site/payload-secret-EzdWDv"
+  },
+  "public_subnet_1_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "subnet-07378ace64c8d8482"
+  },
+  "public_subnet_2_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "subnet-07285f2b102b8068f"
   },
   "s3_bucket": {
     "sensitive": false,
     "type": "string",
-    "value": "portfolio-assets-481923712132"
-  },
-  "ssh_command": {
-    "sensitive": false,
-    "type": "string",
-    "value": "ssh -i ~/.ssh/id_rsa ubuntu@3.149.29.20"
+    "value": "considerate-site-assets-481923712132"
   }
 }

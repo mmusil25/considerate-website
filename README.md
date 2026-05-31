@@ -1,24 +1,16 @@
 # ConsiderateSystems.com Website
 
-This repo serves two purposes
+This repo defines a turnkey way of setting up a Payload + Next.js website on Amazon web services. Most modern content management systems make starting a new website inexpensive, then jack up the hosting fees once you get real traffic. Vercel is just as bad. This system seeks to flip the script from "start small, pay big when you grow" to "start small, pay less per user as you grow" which is much more appealing to most small and medium sized business owners. 
 
-1. Create a website for Considerate Systems LLC
-2. Create a template for building generic Payload CMS websites
+This website assumes that you will be using Builder.io for page design. Most Small-to-medium sized businesses need website that host both content (blogs, products, videos) as well as 
 
 ## Prerequisites
 
 - **AWS account** with permissions to create VPC, ECS, RDS, S3, ACM, Route53, and IAM resources
 - **AWS CLI** installed and configured (`aws configure`)
 - **Terraform** >= 1.0
-- **Docker** (for building and pushing the app image)
+- **Docker** installed, with your user in the `docker` group (Linux: `sudo usermod -aG docker $USER`, then log out/in or run `newgrp docker`)
 - **Domain name** — purchased via Route53 console (for full automation) or any registrar (manual DNS step required)
-
-## What's in this repo?
-
-This repo is meant to be a turnkey way of setting up a Payload + Next.js website on Amazon web services. The user brings the follow information:
-
-* Funded AWS Account
-* Domain name (can be purchased using AWS Route 53 console [recommended])
 
 ## Steps to stand up a new website:
 
@@ -47,26 +39,68 @@ Copy the `ecr_repository_url` from the output.
 
 ### 3. Build and push
 
+Still inside `terraform/` from step 2:
+
 ```sh
+# Grab the ECR URL from Terraform output
+ECR_URL=$(terraform output -raw ecr_repository_url)
+
+# Authenticate Docker to ECR
 aws ecr get-login-password --region us-east-2 \
-  | docker login --username AWS --password-stdin <ecr_repository_url>
-docker build -f docker/Dockerfile -t <ecr_repository_url>:latest .
-docker push <ecr_repository_url>:latest
+  | docker login --username AWS --password-stdin $ECR_URL
+
+# Return to repo root — docker build context must be here (Dockerfile is in docker/)
+cd ..
+docker build -f docker/Dockerfile -t $ECR_URL:latest .
+docker build -f docker/Dockerfile --target migrator -t $ECR_URL:migrator .
+docker push $ECR_URL:latest
+docker push $ECR_URL:migrator
 ```
 
-Update `container_image` in `terraform.tfvars` with the full image URI.
+> **Note:** If you ran `newgrp docker` to fix Docker permissions, that starts a fresh shell and clears `$ECR_URL`. Re-set it before building: `ECR_URL=$(cd terraform && terraform output -raw ecr_repository_url)`
+
+Then update `container_image` in `terraform.tfvars` with the value of `$ECR_URL`.
 
 ### 4. Apply all infrastructure
 
 ```sh
+cd terraform/
 terraform apply
+
+# Refresh outputs.json in the repo root after every apply
+terraform output -json > ../outputs.json
 ```
 
 Note the `alb_dns_name` output — that's your site's address.
 
 ### 5. Run migrations (first deploy only)
 
-The ECS service starts with `RUN_MIGRATIONS=false`. Before routing traffic, run a one-off ECS task with `RUN_MIGRATIONS=true` overridden against the same cluster and task definition.
+The ECS service starts with `RUN_MIGRATIONS=false` to prevent multiple containers racing on the same DB. Run migrations once as a standalone task before traffic hits the service.
+
+From inside `terraform/`:
+
+```sh
+APP_NAME=$(terraform output -raw app_name)
+SUBNET_1=$(terraform output -raw public_subnet_1_id)
+SUBNET_2=$(terraform output -raw public_subnet_2_id)
+APP_SG=$(terraform output -raw app_security_group_id)
+
+ECR_URL=$(terraform output -raw ecr_repository_url)
+
+aws ecs run-task \
+  --cluster ${APP_NAME}-cluster \
+  --task-definition ${APP_NAME} \
+  --launch-type FARGATE \
+  --network-configuration "awsvpcConfiguration={subnets=[${SUBNET_1},${SUBNET_2}],securityGroups=[${APP_SG}],assignPublicIp=ENABLED}" \
+  --overrides "{\"containerOverrides\":[{\"name\":\"${APP_NAME}\",\"image\":\"${ECR_URL}:migrator\",\"environment\":[{\"name\":\"RUN_MIGRATIONS\",\"value\":\"true\"}]}]}" \
+  --count 1
+```
+
+Watch the logs to confirm migrations complete before moving on:
+
+```sh
+aws logs tail /ecs/${APP_NAME} --follow
+```
 
 ### 6. Wire DNS
 
@@ -83,6 +117,21 @@ The ECS service starts with `RUN_MIGRATIONS=false`. Before routing traffic, run 
 
 Hit `http://<alb_dns_name>` and `http://<alb_dns_name>/admin`.
 
+
+
+## Tearing Down
+
+Destroys all AWS resources provisioned by Terraform. **Irreversible — RDS data and S3 objects will be permanently deleted.**
+
+```sh
+cd terraform && terraform destroy
+```
+
+Terraform will show a plan and ask for confirmation before deleting anything.
+
+## Architecture Diagram 
+
+![arch](img/Turn-key-Payload.drawio.png)
 
 
 ## Resources Provisioned
