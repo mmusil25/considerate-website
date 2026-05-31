@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 60" width="700" height="180">
+
+  <!--
+    CONSIDERATE SYSTEMS LLC — Logo
+    ================================
+    SYMBOL: top-left + bottom-right corner brackets with centered checkmark
+    WORDMARK: "CONSIDERATE" (light) + "SYSTEMS" (bold), DM Sans
+
+    EDITABLE REGIONS — see comments below for what to tweak
+  -->
+
+  <!-- ─────────────────────────────────────────
+       SYMBOL GROUP
+       Origin: top-left of symbol bounding box
+       Symbol spans a 48x48 unit square
+       Centered vertically in the 60-unit tall canvas at y=6
+  ──────────────────────────────────────────── -->
+  <g id="symbol" transform="translate(0, 6)">
+
+    <!-- TOP-LEFT BRACKET
+         Adjust the number after "M" on each arm to change arm length.
+         Currently: 14 units on both horizontal and vertical arm.
+         e.g. "M14,0" controls horizontal arm length,
+              "L0,14" controls vertical arm length.
+    -->
+    <path id="bracket-top-left"
+      d="M14,0 L2,0 L2,14"
+      fill="none"
+      stroke="#185FA5"
+      stroke-width="3"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+    <!-- BOTTOM-RIGHT BRACKET
+         Mirror of top-left. Sits at bottom-right of the 48x48 box.
+         Adjust "M34,48" / "L48,34" arm lengths to match top-left.
+    -->
+    <path id="bracket-bottom-right"
+      d="M34,48 L48,48 L48,34"
+      fill="none"
+      stroke="#185FA5"
+      stroke-width="3"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+    <!-- CHECKMARK
+         Currently positioned to sit centered in the 48x48 box.
+         The three points are: start (left), bottom-vertex, end (top-right).
+
+         TO CENTER: the visual center of a checkmark is roughly at the vertex.
+         Current vertex: (22, 34) — move both points proportionally to recenter.
+
+         TO ADD BOW: change the straight path to a quadratic bezier curve.
+         Replace this <path> with:
+           <path d="M10,22 Q24,42 38,14"
+                 ... same stroke attrs .../>
+         The "Q x,y" control point pulls the stroke into a curve.
+         Move the Q control point UP (decrease y) to bow upward,
+         or DOWN (increase y) to bow downward.
+
+         CURRENT POINTS (straight):
+           Start:  10, 22
+           Vertex: 22, 34
+           End:    38, 14
+
+         SUGGESTED BOWED VERSION (quadratic bezier):
+           d="M10,22 Q20,38 22,34 Q28,26 38,14"
+           — or simpler single curve: d="M10,24 Q22,40 38,14"
+    -->
+    <path id="checkmark"
+      d="M14,26 L22,34 L38,14"
+      fill="none"
+      stroke="#185FA5"
+      stroke-width="3"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+  </g>
+
+  <!-- ─────────────────────────────────────────
+       WORDMARK GROUP
+       x=58 puts it to the right of the 48-wide symbol + 10px gap
+       Adjust x to increase/decrease gap between symbol and text.
+  ──────────────────────────────────────────── -->
+  <g id="wordmark" font-family="'DM Sans', Arial, sans-serif" letter-spacing="2.5">
+
+    <!-- "CONSIDERATE" — light weight
+         font-size and y control vertical position.
+         y=28 sits on the upper baseline.
+         Adjust letter-spacing (currently 2.5) to taste.
+    -->
+    <text id="text-considerate"
+      x="58" y="28"
+      font-size="18"
+      font-weight="300"
+      fill="#2C2C2A">CONSIDERATE</text>
+
+    <!-- "SYSTEMS" — bold weight
+         y=50 sits on the lower baseline.
+         Should align left edge with CONSIDERATE (same x=58).
+    -->
+    <text id="text-systems"
+      x="58" y="50"
+      font-size="18"
+      font-weight="600"
+      fill="#2C2C2A">SYSTEMS</text>
+
+  </g>
+
+</svg>
