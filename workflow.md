@@ -18,6 +18,24 @@ There are three modes. You pick the one that matches what you're trying to do.
 
 ## One-Time Setup (do this once per machine)
 
+### 0. Install Docker Compose plugin
+
+Docker Engine and the Compose plugin are separate packages. If `docker compose` gives an "unknown command" error, install the plugin as a user-level CLI binary (no sudo needed, works regardless of how Docker was installed):
+
+```sh
+mkdir -p ~/.docker/cli-plugins
+curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+  -o ~/.docker/cli-plugins/docker-compose
+chmod +x ~/.docker/cli-plugins/docker-compose
+```
+
+Verify:
+```sh
+docker compose version
+```
+
+**Note on Docker socket permissions:** If docker commands give a "permission denied" error on `/var/run/docker.sock`, your shell session predates being added to the `docker` group. Either open a fresh terminal (group takes effect on new login) or prefix docker commands with `sg docker -c "..."` in the current session.
+
 ### 1. Install dependencies
 
 ```sh
@@ -30,6 +48,7 @@ If you ever see `Cannot find package '...'`, run this again — it means node_mo
 ### 2. Create your local `.env`
 
 ```sh
+cd ..
 cp docker/.env.example app/.env
 ```
 
