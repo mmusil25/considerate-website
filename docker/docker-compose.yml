@@ -90,6 +90,7 @@ services:
       # context is the repo root so the build can reach both app/ and docker/
       context: ..
       dockerfile: docker/Dockerfile
+      target: runner
       args:
         GIT_SHA: dev
     depends_on:
@@ -117,6 +118,9 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin
       # --- Builder.io ---
       NEXT_PUBLIC_BUILDER_API_KEY: ${NEXT_PUBLIC_BUILDER_API_KEY:-}
+      # Next.js standalone binds to 127.0.0.1 by default; 0.0.0.0 makes it
+      # reachable from outside the container (and passes the healthcheck).
+      HOSTNAME: "0.0.0.0"
     ports:
       - "3000:3000"
 

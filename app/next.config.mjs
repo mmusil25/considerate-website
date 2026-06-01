@@ -2,22 +2,35 @@ import { withPayload } from '@payloadcms/next/withPayload'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Emit a self-contained server bundle (.next/standalone) so the Docker image
-  // ships only the node_modules the server actually needs (~150 MB) instead of
-  // the full tree (~1 GB+). The docker/Dockerfile runner stage relies on this.
   output: 'standalone',
+
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          // Tells browsers to always use HTTPS — eliminates the HTTP→HTTPS
+          // redirect round-trip on repeat visits (Lighthouse "multiple redirects").
+          // 2-year max-age is the recommended value for HSTS preload submission.
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+        ],
+      },
+    ]
+  },
+
   webpack: (config) => {
     config.watchOptions = {
       ignored: ['**/node_modules/**', '**/.git/**', '**/.next/**'],
     }
     return config
   },
+
   images: {
     remotePatterns: [
       { hostname: 'cdn.builder.io' },
-      // When media is served via CloudFront, add the site's distribution domain
-      // so Next can optimize S3-hosted images, e.g.:
-      // { hostname: 'd23c3aaj86r78z.cloudfront.net' },
     ],
   },
 }

@@ -2,6 +2,13 @@
   "name": "considerate-website",
   "version": "1.0.0",
   "type": "module",
+  "browserslist": [
+    "chrome >= 96",
+    "firefox >= 96",
+    "safari >= 15",
+    "edge >= 96",
+    "not dead"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",

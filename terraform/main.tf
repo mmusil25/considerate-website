@@ -596,6 +596,50 @@ resource "aws_ecs_task_definition" "app" {
 }
 
 # =============================================================================
+# Migrator task definition
+# One-off ECS RunTask run before each deployment that changes the DB schema.
+# Uses the :migrator image tag (the builder stage — has full source + payload
+# CLI). Runs `payload migrate` via the entrypoint then exits; never kept alive.
+# =============================================================================
+resource "aws_ecs_task_definition" "migrator" {
+  family                   = "${var.app_name}-migrator"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([{
+    name      = "${var.app_name}-migrator"
+    image     = "${aws_ecr_repository.app.repository_url}:migrator"
+    essential = true
+
+    environment = [
+      { name = "NODE_ENV",       value = "production" },
+      { name = "DATABASE_URL",   value = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.db_name}" },
+      { name = "RUN_MIGRATIONS", value = "true" },
+    ]
+
+    secrets = [{
+      name      = "PAYLOAD_SECRET"
+      valueFrom = aws_secretsmanager_secret.payload_secret.arn
+    }]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.app.name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "migrate"
+      }
+    }
+  }])
+
+  tags = { Name = "${var.app_name}-migrator" }
+}
+
+# =============================================================================
 # ECS Service
 # =============================================================================
 
@@ -751,6 +795,11 @@ output "alb_dns_name" {
 output "ecr_repository_url" {
   description = "ECR repo URL — push images here, then update container_image variable"
   value       = aws_ecr_repository.app.repository_url
+}
+
+output "migrator_task_definition_family" {
+  description = "Migrator task definition family name — use with aws ecs run-task --task-definition"
+  value       = aws_ecs_task_definition.migrator.family
 }
 
 output "db_endpoint" {

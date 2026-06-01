@@ -44,6 +44,8 @@ export default function HomePage() {
             alt="Mark Musil"
             width={347}
             height={520}
+            sizes="347px"
+            priority
             style={{ display: 'block', objectFit: 'cover' }}
           />
         </div>

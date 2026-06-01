@@ -150,22 +150,25 @@ Do this after Mode 1 or 2 confirms everything works.
 ```sh
 cd ~/code/considerate-website
 
-ECR_URL=481923712132.dkr.ecr.us-east-2.amazonaws.com/considerate-site
+# Derive ECR URL and region from Terraform state — no hardcoding
+ECR_URL=$(cd terraform && terraform output -raw ecr_repository_url)
+AWS_REGION=$(echo "$ECR_URL" | cut -d. -f4)
 
 # Re-authenticate (ECR tokens expire after 12 hours)
-aws ecr get-login-password --region us-east-2 \
-  | sg docker -c "docker login --username AWS --password-stdin $ECR_URL"
+aws ecr get-login-password --region "$AWS_REGION" | sg docker -c "docker login --username AWS --password-stdin $ECR_URL"
 
-# Build both images from repo root
-sg docker -c "docker build -f docker/Dockerfile -t $ECR_URL:latest ."
+# Build and push both images from repo root
+sg docker -c "docker build -f docker/Dockerfile --target runner  -t $ECR_URL:latest ."
 sg docker -c "docker build -f docker/Dockerfile --target migrator -t $ECR_URL:migrator ."
-
-# Push
 sg docker -c "docker push $ECR_URL:latest"
 sg docker -c "docker push $ECR_URL:migrator"
+
+# Deploy (no schema changes — skip to this if no new migrations)
+APP_NAME=$(cd terraform && terraform output -raw app_name)
+aws ecs update-service --cluster ${APP_NAME}-cluster --service ${APP_NAME}-service --force-new-deployment
 ```
 
-Then go to the ECS deployment steps below.
+If you **do** have schema changes (new migration files committed), run the migrator before the last line — see The Schema Change Workflow below.
 
 ---
 
@@ -200,39 +203,33 @@ The files in `app/src/migrations/` are the source of truth for the DB schema. Ne
 ```sh
 cd ~/code/considerate-website
 
-# Build and push new images (migrations are baked in)
-ECR_URL=481923712132.dkr.ecr.us-east-2.amazonaws.com/considerate-site
-sg docker -c "docker build -f docker/Dockerfile -t $ECR_URL:latest ."
+# Build and push (same as Mode 3 above)
+ECR_URL=$(cd terraform && terraform output -raw ecr_repository_url)
+AWS_REGION=$(echo "$ECR_URL" | cut -d. -f4)
+aws ecr get-login-password --region "$AWS_REGION" | sg docker -c "docker login --username AWS --password-stdin $ECR_URL"
+sg docker -c "docker build -f docker/Dockerfile --target runner  -t $ECR_URL:latest ."
 sg docker -c "docker build -f docker/Dockerfile --target migrator -t $ECR_URL:migrator ."
 sg docker -c "docker push $ECR_URL:latest"
 sg docker -c "docker push $ECR_URL:migrator"
 
-# Run the migrator task FIRST — updates the RDS schema
-cd terraform
-APP_NAME=$(terraform output -raw app_name)
-SUBNET_1=$(terraform output -raw public_subnet_1_id)
-SUBNET_2=$(terraform output -raw public_subnet_2_id)
-APP_SG=$(terraform output -raw app_security_group_id)
+# Collect Terraform outputs
+APP_NAME=$(cd terraform && terraform output -raw app_name)
+SUBNET_1=$(cd terraform && terraform output -raw public_subnet_1_id)
+SUBNET_2=$(cd terraform && terraform output -raw public_subnet_2_id)
+APP_SG=$(cd terraform && terraform output -raw app_security_group_id)
+MIGRATOR_TD=$(cd terraform && terraform output -raw migrator_task_definition_family)
 
-aws ecs run-task \
-  --cluster ${APP_NAME}-cluster \
-  --task-definition ${APP_NAME} \
-  --launch-type FARGATE \
-  --network-configuration "awsvpcConfiguration={subnets=[${SUBNET_1},${SUBNET_2}],securityGroups=[${APP_SG}],assignPublicIp=ENABLED}" \
-  --overrides "{\"containerOverrides\":[{\"name\":\"${APP_NAME}\",\"image\":\"${ECR_URL}:migrator\",\"environment\":[{\"name\":\"RUN_MIGRATIONS\",\"value\":\"true\"}]}]}" \
-  --count 1
+# Run migrator task (single line — avoids shell continuation quoting issues)
+aws ecs run-task --cli-input-json "{\"cluster\":\"${APP_NAME}-cluster\",\"taskDefinition\":\"${MIGRATOR_TD}\",\"launchType\":\"FARGATE\",\"networkConfiguration\":{\"awsvpcConfiguration\":{\"subnets\":[\"${SUBNET_1}\",\"${SUBNET_2}\"],\"securityGroups\":[\"${APP_SG}\"],\"assignPublicIp\":\"ENABLED\"}},\"count\":1}"
 
-# Watch for "migrations up to date" in the logs, then Ctrl+C
+# Watch logs until you see "Done." then Ctrl+C
 aws logs tail /ecs/${APP_NAME} --follow
 
-# THEN deploy the new app image
-aws ecs update-service \
-  --cluster ${APP_NAME}-cluster \
-  --service ${APP_NAME}-service \
-  --force-new-deployment
+# Deploy new app image
+aws ecs update-service --cluster ${APP_NAME}-cluster --service ${APP_NAME}-service --force-new-deployment
 ```
 
-**Order is critical:** migrator first, app second. The new app code expects the new schema. If the app deploys before migrations run, it will crash on startup.
+**Order is critical:** migrator first, app second. If the app deploys before migrations run, it will crash on startup.
 
 ---
 
