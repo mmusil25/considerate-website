@@ -69,6 +69,9 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    technologies: Technology;
+    'site-settings': SiteSetting;
+    videos: Video;
     projects: Project;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -79,6 +82,9 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    technologies: TechnologiesSelect<false> | TechnologiesSelect<true>;
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    videos: VideosSelect<false> | VideosSelect<true>;
     projects: ProjectsSelect<false> | ProjectsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -166,6 +172,159 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "technologies".
+ */
+export interface Technology {
+  id: number;
+  /**
+   * e.g., "React", "Node.js", "AWS"
+   */
+  name: string;
+  /**
+   * Official website or documentation (optional)
+   */
+  url?: string | null;
+  /**
+   * Categorize the technology for filtering
+   */
+  category?: ('language' | 'framework' | 'tool' | 'platform' | 'database' | 'service' | 'other') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  /**
+   * e.g., "Considerate Systems LLC"
+   */
+  organizationName: string;
+  /**
+   * What does your organization do?
+   */
+  organizationDescription?: string | null;
+  /**
+   * Organization logo (for schema.org and social)
+   */
+  logo?: (number | null) | Media;
+  /**
+   * When was the organization founded?
+   */
+  foundingDate?: string | null;
+  /**
+   * Physical address or location
+   */
+  address?: string | null;
+  /**
+   * Contact email address
+   */
+  email?: string | null;
+  /**
+   * Contact phone number
+   */
+  telephone?: string | null;
+  /**
+   * First name, e.g., "Mark"
+   */
+  personGivenName: string;
+  /**
+   * Last name, e.g., "Musil"
+   */
+  personFamilyName: string;
+  /**
+   * e.g., "Founder & Principal Consultant"
+   */
+  personJobTitle?: string | null;
+  /**
+   * Professional bio (2-3 sentences)
+   */
+  personBio?: string | null;
+  /**
+   * Professional headshot or photo
+   */
+  personImage?: (number | null) | Media;
+  /**
+   * Select core expertise/technologies
+   */
+  personExpertise?: (number | Technology)[] | null;
+  /**
+   * LinkedIn profile URL (optional)
+   */
+  linkedinUrl?: string | null;
+  /**
+   * GitHub profile URL (optional)
+   */
+  githubUrl?: string | null;
+  /**
+   * e.g., "$120/hr" - for schema.org Offer
+   */
+  hourlyRate?: string | null;
+  /**
+   * Current availability for new projects
+   */
+  availabilityStatus?: ('available' | 'limited' | 'unavailable') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * High-quality video, transcoded to adaptive HLS. Upload a source file and the pipeline produces a streaming ladder capped at the source quality.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "videos".
+ */
+export interface Video {
+  id: number;
+  /**
+   * Internal label, e.g. "Bakery build timelapse"
+   */
+  title: string;
+  /**
+   * Set automatically by the upload + transcode pipeline.
+   */
+  status?: ('empty' | 'uploading' | 'processing' | 'ready' | 'error') | null;
+  /**
+   * S3 key of the archived original (ceiling-quality playback).
+   */
+  sourceKey?: string | null;
+  /**
+   * MIME type of the original, used by the player to feature-detect direct playback.
+   */
+  sourceMimeType?: string | null;
+  /**
+   * S3 key of the HLS master manifest (index.m3u8). Set when transcode completes.
+   */
+  hlsManifestKey?: string | null;
+  /**
+   * S3 key of the poster/thumbnail frame.
+   */
+  posterKey?: string | null;
+  /**
+   * MediaConvert job id (for debugging).
+   */
+  mediaConvertJobId?: string | null;
+  /**
+   * Duration in milliseconds.
+   */
+  durationMs?: number | null;
+  /**
+   * Source width (px). The ladder never upscales beyond this.
+   */
+  width?: number | null;
+  /**
+   * Source height (px).
+   */
+  height?: number | null;
+  /**
+   * Populated if transcoding failed.
+   */
+  errorMessage?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "projects".
  */
 export interface Project {
@@ -199,9 +358,13 @@ export interface Project {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Optional video of this project (adaptive HLS, plays on the project page).
+   */
+  projectVideo?: (number | null) | Video;
   technologies?:
     | {
-        tech?: string | null;
+        tech?: (number | null) | Technology;
         id?: string | null;
       }[]
     | null;
@@ -214,6 +377,31 @@ export interface Project {
    */
   featured?: boolean | null;
   publishedAt?: string | null;
+  /**
+   * Configure how search engines and AI interpret this project. Fields auto-map from the content above.
+   */
+  structuredData: {
+    /**
+     * Choose the schema type that best describes this project.
+     */
+    schemaType: 'CreativeWork' | 'WebApplication' | 'SoftwareSourceCode' | 'Service';
+    /**
+     * Quantifiable results or impact (e.g., "Reduced latency by 40%", "Shipped in 2 months")
+     */
+    outcomes?: string | null;
+    /**
+     * SEO keywords that describe this project
+     */
+    keywordsFocused?:
+      | {
+          /**
+           * e.g., "React development", "Cloud migration"
+           */
+          keyword?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -248,6 +436,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'technologies';
+        value: number | Technology;
+      } | null)
+    | ({
+        relationTo: 'site-settings';
+        value: number | SiteSetting;
+      } | null)
+    | ({
+        relationTo: 'videos';
+        value: number | Video;
       } | null)
     | ({
         relationTo: 'projects';
@@ -338,6 +538,61 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "technologies_select".
+ */
+export interface TechnologiesSelect<T extends boolean = true> {
+  name?: T;
+  url?: T;
+  category?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  organizationName?: T;
+  organizationDescription?: T;
+  logo?: T;
+  foundingDate?: T;
+  address?: T;
+  email?: T;
+  telephone?: T;
+  personGivenName?: T;
+  personFamilyName?: T;
+  personJobTitle?: T;
+  personBio?: T;
+  personImage?: T;
+  personExpertise?: T;
+  linkedinUrl?: T;
+  githubUrl?: T;
+  hourlyRate?: T;
+  availabilityStatus?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "videos_select".
+ */
+export interface VideosSelect<T extends boolean = true> {
+  title?: T;
+  status?: T;
+  sourceKey?: T;
+  sourceMimeType?: T;
+  hlsManifestKey?: T;
+  posterKey?: T;
+  mediaConvertJobId?: T;
+  durationMs?: T;
+  width?: T;
+  height?: T;
+  errorMessage?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "projects_select".
  */
 export interface ProjectsSelect<T extends boolean = true> {
@@ -353,6 +608,7 @@ export interface ProjectsSelect<T extends boolean = true> {
         image?: T;
         id?: T;
       };
+  projectVideo?: T;
   technologies?:
     | T
     | {
@@ -362,6 +618,18 @@ export interface ProjectsSelect<T extends boolean = true> {
   liveUrl?: T;
   featured?: T;
   publishedAt?: T;
+  structuredData?:
+    | T
+    | {
+        schemaType?: T;
+        outcomes?: T;
+        keywordsFocused?:
+          | T
+          | {
+              keyword?: T;
+              id?: T;
+            };
+      };
   updatedAt?: T;
   createdAt?: T;
 }

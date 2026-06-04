@@ -1,6 +1,7 @@
 import * as migration_20260526_000858 from './20260526_000858';
 import * as migration_20260526_170948_add_media_s3_prefix from './20260526_170948_add_media_s3_prefix';
 import * as migration_20260601_051234 from './20260601_051234';
+import * as migration_20260604_120107_add_videos_and_seo from './20260604_120107_add_videos_and_seo';
 
 export const migrations = [
   {
@@ -16,6 +17,11 @@ export const migrations = [
   {
     up: migration_20260601_051234.up,
     down: migration_20260601_051234.down,
-    name: '20260601_051234'
+    name: '20260601_051234',
+  },
+  {
+    up: migration_20260604_120107_add_videos_and_seo.up,
+    down: migration_20260604_120107_add_videos_and_seo.down,
+    name: '20260604_120107_add_videos_and_seo'
   },
 ];

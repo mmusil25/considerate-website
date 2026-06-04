@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { DM_Sans, Source_Sans_3, Work_Sans } from 'next/font/google'
 import '../globals.css'
+import { SchemaInjector } from './components/SchemaInjector'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -35,6 +36,9 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
       lang="en"
       className={`${dmSans.variable} ${sourceSans.variable} ${workSans.variable}`}
     >
+      <head>
+        <SchemaInjector />
+      </head>
       <body>{children}</body>
     </html>
   )

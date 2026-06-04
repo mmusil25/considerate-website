@@ -1,0 +1,141 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Development Workflow" id="dev-workflow">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="Considerate Website — Development Workflow" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="780" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== ONE-TIME SETUP ===================== -->
+        <mxCell id="setup-box" value="One-Time Setup (once per machine)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#333333;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="360" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="s0" value="0. Install Docker Compose plugin&#10;~/.docker/cli-plugins/docker-compose" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="120" width="320" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="1. npm install&#10;(cd app)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="185" width="320" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="2. Create app/.env&#10;(localhost endpoints, not Docker service names)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="245" width="320" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="3. Start backing services&#10;docker compose up db minio createbuckets -d&#10;Postgres :5432 · MinIO :9000 (console :9001)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="310" width="320" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="4. Run existing migrations&#10;npx payload migrate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="385" width="320" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e-s0-s1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="s0" target="s1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-s1-s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="s1" target="s2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-s2-s3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="s2" target="s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-s3-s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="s3" target="s4"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ===================== THE THREE MODES ===================== -->
+        <mxCell id="modes-title" value="The Three Modes" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="460" y="85" width="300" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Mode 1 -->
+        <mxCell id="m1" value="Mode 1 — Local Dev&#10;(daily work · fast hot reload)&#10;&#10;cd app &amp;&amp; npm run dev&#10;App :3000 · Admin :3000/admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="460" y="130" width="320" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="m1-note" value="Requires backing services (step 3) running" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontColor=#666666;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="470" y="200" width="300" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Mode 2 -->
+        <mxCell id="m2" value="Mode 2 — Docker Compose&#10;(production-parity test · slow full build)&#10;&#10;cd docker &amp;&amp; docker compose up --build&#10;Postgres → MinIO → migrations → app&#10;Same Dockerfile ECS uses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="460" y="270" width="320" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Mode 3 -->
+        <mxCell id="m3" value="Mode 3 — Push to ECS&#10;(ship to production)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;align=center;verticalAlign=top;spacingTop=8;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="460" y="420" width="320" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- progression arrows between modes -->
+        <mxCell id="e-m1-m2" value="ready to ship?" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;fontSize=10;" edge="1" parent="1" source="m1" target="m2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-m2-m3" value="build verified" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;fontSize=10;" edge="1" parent="1" source="m2" target="m3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-setup-m1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;dashed=1;" edge="1" parent="1" source="s4" target="m1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ===================== ECS DEPLOY DETAIL ===================== -->
+        <mxCell id="deploy-box" value="ECS Deploy — choose path by whether schema changed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#999999;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#333333;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="840" y="80" width="760" height="640" as="geometry" />
+        </mxCell>
+
+        <!-- Build & push (common) -->
+        <mxCell id="d-build" value="Build &amp; push images to ECR&#10;&#10;ECR_URL = terraform output ecr_repository_url&#10;aws ecr get-login-password | docker login&#10;docker build --target runner   → :latest&#10;docker build --target migrator → :migrator&#10;docker push :latest  &amp;&amp;  docker push :migrator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="120" width="320" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Decision -->
+        <mxCell id="d-decision" value="Schema changed?&#10;(new migration files committed)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1100" y="280" width="280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="e-build-dec" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="d-build" target="d-decision"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- NO path -->
+        <mxCell id="d-no" value="NO" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;fontColor=#b85450" vertex="1" parent="1">
+          <mxGeometry x="1410" y="320" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="d-deploy-only" value="Deploy new app image&#10;&#10;aws ecs update-service&#10;--force-new-deployment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="1430" y="350" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="e-dec-no" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#b85450;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="d-decision" target="d-deploy-only"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- YES path: migrator first -->
+        <mxCell id="d-yes" value="YES — migrator FIRST, app SECOND" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;fontColor=#82b366" vertex="1" parent="1">
+          <mxGeometry x="1060" y="410" width="360" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="d-migrator" value="1. Run migrator task (FARGATE)&#10;&#10;Collect TF outputs: app_name, subnets,&#10;app_security_group_id, migrator_task_definition_family&#10;aws ecs run-task --cli-input-json {...}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="440" width="320" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="d-watch" value="2. Watch logs until &quot;Done.&quot;&#10;aws logs tail /ecs/${APP_NAME} --follow" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="560" width="320" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="d-deploy-app" value="3. Deploy new app image&#10;aws ecs update-service --force-new-deployment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="635" width="320" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e-dec-yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#82b366;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="d-decision" target="d-migrator"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-mig-watch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#d79b00;" edge="1" parent="1" source="d-migrator" target="d-watch"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-watch-deploy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#b85450;" edge="1" parent="1" source="d-watch" target="d-deploy-app"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="d-warn" value="⚠ Order is critical: if the app deploys before migrations run, it crashes on startup." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=10;fontStyle=2;fontColor=#b85450" vertex="1" parent="1">
+          <mxGeometry x="860" y="120" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- link Mode 3 into deploy box -->
+        <mxCell id="e-m3-deploy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#b85450;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=1;" edge="1" parent="1" source="m3" target="d-build"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ===================== SCHEMA CHANGE (LOCAL) ===================== -->
+        <mxCell id="schema-box" value="Schema Change — Local steps (Mode 1) before any ECS deploy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#333333;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="760" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="sc1" value="1. Edit collection / global file" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="545" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sc2" value="2. payload migrate:create&#10;--name describe_change" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="545" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sc3" value="3. payload migrate&#10;(apply to local DB)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="545" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sc4" value="4. Verify in admin panel&#10;localhost:3000/admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="545" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sc5" value="5. git add src/migrations/ &amp;&amp; commit — files are the source of truth; travel with code into Docker, run on ECS via migrator task. Never edit/delete manually." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=10;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="60" y="630" width="700" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e-sc1-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="sc1" target="sc2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-sc2-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="sc2" target="sc3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-sc3-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="sc3" target="sc4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e-sc4-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6c8ebf;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="sc4" target="sc5"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

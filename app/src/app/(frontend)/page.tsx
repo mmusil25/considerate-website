@@ -38,7 +38,7 @@ export default function HomePage() {
           <NavMenu />
         </div>
 
-        <div style={{ width: '347px', margin: '0 auto' }}>
+        <div style={{ width: '347px', margin: '0 auto', borderRadius: '16px', overflow: 'hidden' }}>
           <Image
             src="/Mark.jpg"
             alt="Mark Musil"

@@ -31,6 +31,10 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { hostname: 'cdn.builder.io' },
+      // Video posters (and any future media) are served via CloudFront. The
+      // distribution domain is injected per-environment so next/image will
+      // optimize/allow them. Falls back to a harmless placeholder if unset.
+      { hostname: process.env.CLOUDFRONT_DOMAIN || 'cloudfront.invalid' },
     ],
   },
 }

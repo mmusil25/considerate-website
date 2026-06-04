@@ -6,7 +6,10 @@ import { RichText } from '@payloadcms/richtext-lexical/react'
 import type { Metadata } from 'next'
 import config from '@/payload.config'
 import { SiteHeader } from '../../components/SiteHeader'
-import type { Media } from '../../../../../payload-types'
+import { generateProjectJSONLD, serializeJsonLD, type SchemaType } from '@/lib/schema'
+import { cdnUrl } from '@/lib/cdn'
+import { VideoPlayer } from '@/components/VideoPlayer'
+import type { Media, Video } from '../../../../../payload-types'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,14 +21,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { docs } = await payload.find({
     collection: 'projects',
     where: { slug: { equals: slug } },
-    depth: 0,
+    depth: 1,
     limit: 1,
   })
   const project = docs[0]
   if (!project) return {}
+
+  // Generate JSON-LD for schema
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://considerate-systems.com'
+  const schemaType = (project.structuredData?.schemaType as SchemaType) || 'CreativeWork'
+  const jsonld = generateProjectJSONLD(project, baseUrl, schemaType)
+
   return {
     title: project.title,
     description: project.description ?? undefined,
+    other: {
+      'application/ld+json': JSON.stringify(jsonld),
+    },
   }
 }
 
@@ -43,10 +55,18 @@ export default async function ProjectPage({ params }: Props) {
   if (!project) notFound()
 
   const heroImage = typeof project.image === 'object' ? (project.image as Media) : null
+  const video =
+    project.projectVideo && typeof project.projectVideo === 'object'
+      ? (project.projectVideo as Video)
+      : null
   const gallery = (project.gallery ?? [])
     .map((g) => (typeof g.image === 'object' ? (g.image as Media) : null))
     .filter(Boolean) as Media[]
-  const techs = (project.technologies ?? []).map((t) => t.tech).filter(Boolean) as string[]
+  const techs = (project.technologies ?? []).map((t) => {
+    const tech = typeof t.tech === 'object' ? t.tech : null
+    if (!tech) return null
+    return typeof tech === 'string' ? tech : tech.name
+  }).filter(Boolean) as string[]
   const date = project.publishedAt
     ? new Date(project.publishedAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -54,8 +74,20 @@ export default async function ProjectPage({ params }: Props) {
       })
     : null
 
+  // Generate JSON-LD for this project
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://considerate-systems.com'
+  const schemaType = (project.structuredData?.schemaType as SchemaType) || 'CreativeWork'
+  const jsonld = generateProjectJSONLD(project, baseUrl, schemaType)
+
   return (
-    <main style={{ backgroundColor: '#E6F1FB', minHeight: '100vh' }}>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLD(jsonld),
+        }}
+      />
+      <main style={{ backgroundColor: '#E6F1FB', minHeight: '100vh' }}>
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '9px 25px 60px' }}>
         <SiteHeader />
 
@@ -150,6 +182,16 @@ export default async function ProjectPage({ params }: Props) {
             </div>
           )}
 
+          {/* Project video (adaptive HLS, ceiling-quality original toggle) */}
+          {video?.status === 'ready' && (
+            <VideoPlayer
+              manifestUrl={cdnUrl(video.hlsManifestKey)}
+              sourceUrl={cdnUrl(video.sourceKey)}
+              sourceMimeType={video.sourceMimeType}
+              poster={cdnUrl(video.posterKey)}
+            />
+          )}
+
           {/* Description */}
           {project.description && (
             <p
@@ -231,5 +273,6 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       </div>
     </main>
+    </>
   )
 }

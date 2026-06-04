@@ -51,7 +51,10 @@ aws ecr get-login-password --region us-east-2 \
 
 # Return to repo root — docker build context must be here (Dockerfile is in docker/)
 cd ..
-docker build -f docker/Dockerfile -t $ECR_URL:latest .
+# NOTE: `migrator` is the LAST stage in the Dockerfile, so a build with no --target
+# would produce the migrator image (CMD ["true"]) and the app would exit immediately.
+# Always pin the app image to the `runner` stage explicitly.
+docker build -f docker/Dockerfile --target runner   -t $ECR_URL:latest .
 docker build -f docker/Dockerfile --target migrator -t $ECR_URL:migrator .
 docker push $ECR_URL:latest
 docker push $ECR_URL:migrator

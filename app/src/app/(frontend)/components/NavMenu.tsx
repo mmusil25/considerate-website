@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export const navItems = [
   {
-    label: 'Schedule a free intro call',
+    label: 'Schedule a call',
     href: 'https://meet.consideratesystems.com/mark',
     shortcut: ['Ctrl', 'Alt', 'S'],
     key: 's',
@@ -10,7 +10,7 @@ export const navItems = [
     external: true,
   },
   {
-    label: 'Portfolio/Past Projects',
+    label: 'Past Projects',
     href: '/projects',
     shortcut: ['Ctrl', 'Alt', 'P'],
     key: 'p',
@@ -57,10 +57,12 @@ const Shortcut = ({ keys }: { keys: readonly string[] }) => (
   </div>
 )
 
+const BORDER_RADIUS = '5px'
+
 export function NavMenu({ variant = 'horizontal' }: { variant?: 'horizontal' | 'stacked' }) {
   if (variant === 'stacked') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '200px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '140px' }}>
         {navItems.map((item) => (
           <Link
             key={item.label}
@@ -73,6 +75,7 @@ export function NavMenu({ variant = 'horizontal' }: { variant?: 'horizontal' | '
               gap: '5px',
               padding: '7px 10px',
               backgroundColor: item.active ? '#185FA5' : '#2C2C2A',
+              borderRadius: BORDER_RADIUS,
               color: '#ffffff',
               textDecoration: 'none',
             }}
@@ -89,7 +92,7 @@ export function NavMenu({ variant = 'horizontal' }: { variant?: 'horizontal' | '
 
   // horizontal: label left, shortcuts right — matches Penpot design
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '276px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '220px' }}>
       {navItems.map((item) => (
         <Link
           key={item.label}
@@ -103,6 +106,7 @@ export function NavMenu({ variant = 'horizontal' }: { variant?: 'horizontal' | '
             padding: '0 8px',
             height: '32px',
             backgroundColor: item.active ? '#185FA5' : '#2C2C2A',
+            borderRadius: BORDER_RADIUS,
             color: '#ffffff',
             fontFamily: "'Work Sans', sans-serif",
             fontSize: '12px',

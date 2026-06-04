@@ -5,6 +5,9 @@ import { s3Storage } from '@payloadcms/storage-s3'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import Projects from './collections/Projects.ts'
+import Technologies from './collections/Technologies.ts'
+import SiteSettings from './collections/SiteSettings.ts'
+import Videos from './collections/Videos.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -43,6 +46,11 @@ const s3Plugin = s3Storage({
 export default buildConfig({
   admin: {
     user: 'users',
+    // Custom admin components live in src/components. Resolve component path
+    // strings (e.g. "/components/payload/...") relative to this src dir.
+    importMap: {
+      baseDir: path.resolve(dirname),
+    },
   },
   editor: lexicalEditor(),
   collections: [
@@ -56,6 +64,9 @@ export default buildConfig({
       upload: true,
       fields: [],
     },
+    Technologies,
+    SiteSettings,
+    Videos,
     Projects,
   ],
   db: postgresAdapter({

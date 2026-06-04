@@ -8,6 +8,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -243,7 +247,7 @@ resource "random_password" "payload_secret" {
 resource "aws_secretsmanager_secret" "payload_secret" {
   name                    = "${var.app_name}/payload-secret"
   description             = "Stable PAYLOAD_SECRET for ${var.app_name}. Do NOT rotate without planning."
-  recovery_window_in_days = 0  # allows immediate delete+recreate with the same name
+  recovery_window_in_days = 0 # allows immediate delete+recreate with the same name
 }
 
 resource "aws_secretsmanager_secret_version" "payload_secret" {
@@ -257,7 +261,7 @@ resource "aws_secretsmanager_secret_version" "payload_secret" {
 
 resource "aws_s3_bucket" "assets" {
   bucket        = "${var.app_name}-assets-${data.aws_caller_identity.current.account_id}"
-  force_destroy = true  # allows terraform destroy even when the bucket has objects
+  force_destroy = true # allows terraform destroy even when the bucket has objects
 
   tags = {
     Name = "${var.app_name}-assets"
@@ -270,6 +274,38 @@ resource "aws_s3_bucket_versioning" "assets" {
   versioning_configuration {
     status = "Enabled"
   }
+}
+
+# CORS so the browser can (a) PUT video parts directly to S3 (multipart upload)
+# and (b) let hls.js fetch manifests/segments cross-origin. ETag must be exposed
+# for the multipart client to assemble the CompleteMultipartUpload request.
+resource "aws_s3_bucket_cors_configuration" "assets" {
+  bucket = aws_s3_bucket.assets.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "POST", "GET", "HEAD"]
+    allowed_origins = compact([
+      local.public_url,
+      "http://${aws_lb.main.dns_name}",
+      "http://localhost:3000",
+    ])
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
+# Managed CloudFront policies for the HLS behavior (cache + CORS passthrough).
+data "aws_cloudfront_cache_policy" "caching_optimized" {
+  name = "Managed-CachingOptimized"
+}
+
+data "aws_cloudfront_origin_request_policy" "cors_s3" {
+  name = "Managed-CORS-S3Origin"
+}
+
+data "aws_cloudfront_response_headers_policy" "cors" {
+  name = "Managed-SimpleCORS"
 }
 
 resource "aws_cloudfront_distribution" "assets" {
@@ -299,6 +335,21 @@ resource "aws_cloudfront_distribution" "assets" {
     max_ttl                = 86400
   }
 
+  # HLS playback: allow OPTIONS (CORS preflight) and forward Origin so hls.js can
+  # fetch manifests/segments cross-origin. Long cache — VOD segments are immutable.
+  ordered_cache_behavior {
+    path_pattern     = "videos/hls/*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id = "S3Assets"
+
+    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
+    origin_request_policy_id   = data.aws_cloudfront_origin_request_policy.cors_s3.id
+    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.cors.id
+
+    viewer_protocol_policy = "redirect-to-https"
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"
@@ -321,7 +372,7 @@ resource "aws_cloudfront_distribution" "assets" {
 resource "aws_ecr_repository" "app" {
   name                 = var.app_name
   image_tag_mutability = "MUTABLE"
-  force_delete         = true  # allows terraform destroy even when images exist
+  force_delete         = true # allows terraform destroy even when images exist
 
   image_scanning_configuration {
     scan_on_push = true
@@ -423,14 +474,22 @@ resource "aws_iam_role" "ecs_task" {
 
 data "aws_iam_policy_document" "ecs_task" {
   statement {
-    sid       = "MediaObjects"
-    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+    sid = "MediaObjects"
+    # AbortMultipartUpload + ListMultipartUploadParts are needed so the app can
+    # presign + finalize direct-to-S3 multipart video uploads.
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+      "s3:AbortMultipartUpload",
+      "s3:ListMultipartUploadParts",
+    ]
     resources = ["${aws_s3_bucket.assets.arn}/*"]
   }
 
   statement {
     sid       = "MediaBucketList"
-    actions   = ["s3:ListBucket"]
+    actions   = ["s3:ListBucket", "s3:ListBucketMultipartUploads"]
     resources = [aws_s3_bucket.assets.arn]
   }
 }
@@ -523,8 +582,8 @@ locals {
   # HTTPS listener exists once Route53 automates it, or once user confirms cert issued
   https_active = local.has_route53 || (local.has_external && var.cert_issued)
   public_url = (
-    var.public_url  != "" ? var.public_url :
-    local.has_domain      ? "https://${var.domain_name}" :
+    var.public_url != "" ? var.public_url :
+    local.has_domain ? "https://${var.domain_name}" :
     "http://${aws_lb.main.dns_name}"
   )
 }
@@ -549,22 +608,29 @@ resource "aws_ecs_task_definition" "app" {
     }]
 
     environment = [
-      { name = "NODE_ENV",                  value = "production" },
-      { name = "PORT",                      value = "3000" },
-      { name = "DATABASE_URL",              value = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.db_name}" },
-      { name = "S3_BUCKET",                 value = aws_s3_bucket.assets.id },
-      { name = "S3_PREFIX",                 value = var.s3_prefix },
-      { name = "AWS_REGION",                value = var.aws_region },
+      { name = "NODE_ENV", value = "production" },
+      { name = "PORT", value = "3000" },
+      { name = "DATABASE_URL", value = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.db_name}" },
+      { name = "S3_BUCKET", value = aws_s3_bucket.assets.id },
+      { name = "S3_PREFIX", value = var.s3_prefix },
+      { name = "AWS_REGION", value = var.aws_region },
       { name = "PAYLOAD_PUBLIC_SERVER_URL", value = local.public_url },
+      # --- Video pipeline ---
+      { name = "CLOUDFRONT_DOMAIN", value = aws_cloudfront_distribution.assets.domain_name },
+      { name = "VIDEO_SOURCE_PREFIX", value = "videos/source/" },
+      { name = "VIDEO_HLS_PREFIX", value = "videos/hls/" },
+      # Shared secret the transcode Lambda uses to authenticate its completion
+      # webhook. Same value is injected into the Lambda below.
+      { name = "WEBHOOK_SECRET", value = random_password.webhook_secret.result },
       # RUN_MIGRATIONS=false: run migrations as a one-off ECS RunTask (off the
       # `builder` image target) before rolling out a new app version, rather than
       # letting N replicas race to migrate the same DB at startup.
-      { name = "RUN_MIGRATIONS",            value = "false" },
+      { name = "RUN_MIGRATIONS", value = "false" },
       # HOSTNAME=0.0.0.0: Next.js standalone binds to the system hostname by
       # default (resolves to the container's bridge IP, not loopback), so the
       # health check fetch('http://127.0.0.1:3000/') gets ECONNREFUSED. Forcing
       # 0.0.0.0 makes the server listen on all interfaces including loopback.
-      { name = "HOSTNAME",                  value = "0.0.0.0" }
+      { name = "HOSTNAME", value = "0.0.0.0" }
     ]
 
     secrets = [{
@@ -616,8 +682,8 @@ resource "aws_ecs_task_definition" "migrator" {
     essential = true
 
     environment = [
-      { name = "NODE_ENV",       value = "production" },
-      { name = "DATABASE_URL",   value = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.db_name}" },
+      { name = "NODE_ENV", value = "production" },
+      { name = "DATABASE_URL", value = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.db_name}" },
       { name = "RUN_MIGRATIONS", value = "true" },
     ]
 
@@ -737,7 +803,7 @@ resource "aws_lb_listener" "https" {
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   # Route53: use validated cert ARN from the waiter
   # External: cert is already issued by the time cert_issued=true, reference ARN directly
-  certificate_arn   = local.has_route53 ? aws_acm_certificate_validation.main[0].certificate_arn : aws_acm_certificate.main[0].arn
+  certificate_arn = local.has_route53 ? aws_acm_certificate_validation.main[0].certificate_arn : aws_acm_certificate.main[0].arn
 
   default_action {
     type             = "forward"
@@ -770,6 +836,183 @@ resource "aws_route53_record" "app_www" {
     zone_id                = aws_lb.main.zone_id
     evaluate_target_health = true
   }
+}
+
+# =============================================================================
+# Video pipeline — S3 event → Lambda → MediaConvert (HLS) → webhook
+#
+# Direct-to-S3 multipart uploads land under videos/source/<id>/. That ObjectCreated
+# event triggers the Lambda, which starts a MediaConvert Automated-ABR HLS job
+# writing to videos/hls/<id>/. A MediaConvert "Job State Change" event (COMPLETE/
+# ERROR) re-invokes the Lambda, which POSTs the app's transcode-callback webhook.
+# =============================================================================
+
+# Shared secret between the Lambda and the app webhook.
+resource "random_password" "webhook_secret" {
+  length  = 48
+  special = false
+}
+
+# --- MediaConvert service role: lets MediaConvert read the source + write HLS ---
+data "aws_iam_policy_document" "mediaconvert_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["mediaconvert.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "mediaconvert" {
+  name               = "${var.app_name}-mediaconvert-role"
+  assume_role_policy = data.aws_iam_policy_document.mediaconvert_assume.json
+  tags               = { Name = "${var.app_name}-mediaconvert-role" }
+}
+
+data "aws_iam_policy_document" "mediaconvert" {
+  statement {
+    sid       = "ReadSourceWriteHls"
+    actions   = ["s3:GetObject", "s3:PutObject"]
+    resources = ["${aws_s3_bucket.assets.arn}/*"]
+  }
+  statement {
+    sid       = "ListBucket"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.assets.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "mediaconvert" {
+  name   = "${var.app_name}-mediaconvert-policy"
+  role   = aws_iam_role.mediaconvert.id
+  policy = data.aws_iam_policy_document.mediaconvert.json
+}
+
+# --- Lambda execution role ---
+data "aws_iam_policy_document" "lambda_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "video_lambda" {
+  name               = "${var.app_name}-video-lambda-role"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+  tags               = { Name = "${var.app_name}-video-lambda-role" }
+}
+
+data "aws_iam_policy_document" "video_lambda" {
+  statement {
+    sid       = "Logs"
+    actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+    resources = ["arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"]
+  }
+  statement {
+    sid       = "MediaConvert"
+    actions   = ["mediaconvert:CreateJob", "mediaconvert:GetJob", "mediaconvert:DescribeEndpoints"]
+    resources = ["*"]
+  }
+  statement {
+    sid       = "PassMediaConvertRole"
+    actions   = ["iam:PassRole"]
+    resources = [aws_iam_role.mediaconvert.arn]
+  }
+  statement {
+    sid       = "ReadSource"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.assets.arn}/videos/source/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "video_lambda" {
+  name   = "${var.app_name}-video-lambda-policy"
+  role   = aws_iam_role.video_lambda.id
+  policy = data.aws_iam_policy_document.video_lambda.json
+}
+
+# --- Lambda function (zipped from terraform/lambda/, uses runtime's @aws-sdk) ---
+data "archive_file" "video_lambda" {
+  type        = "zip"
+  source_dir  = "${path.module}/lambda"
+  output_path = "${path.module}/.build/video-lambda.zip"
+}
+
+resource "aws_lambda_function" "video_pipeline" {
+  function_name    = "${var.app_name}-video-pipeline"
+  role             = aws_iam_role.video_lambda.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = data.archive_file.video_lambda.output_path
+  source_code_hash = data.archive_file.video_lambda.output_base64sha256
+  timeout          = 60
+  memory_size      = 256
+
+  environment {
+    variables = {
+      MEDIACONVERT_ROLE_ARN = aws_iam_role.mediaconvert.arn
+      MEDIACONVERT_QUEUE    = "arn:aws:mediaconvert:${var.aws_region}:${data.aws_caller_identity.current.account_id}:queues/Default"
+      ASSETS_BUCKET         = aws_s3_bucket.assets.id
+      HLS_PREFIX            = "videos/hls/"
+      APP_WEBHOOK_URL       = "${local.public_url}/api/videos/transcode-callback"
+      WEBHOOK_SECRET        = random_password.webhook_secret.result
+    }
+  }
+
+  tags = { Name = "${var.app_name}-video-pipeline" }
+}
+
+# --- Trigger A: S3 ObjectCreated under videos/source/ ---
+resource "aws_lambda_permission" "allow_s3" {
+  statement_id  = "AllowS3Invoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.video_pipeline.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.assets.arn
+}
+
+resource "aws_s3_bucket_notification" "assets" {
+  bucket = aws_s3_bucket.assets.id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.video_pipeline.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "videos/source/"
+  }
+
+  depends_on = [aws_lambda_permission.allow_s3]
+}
+
+# --- Trigger B: MediaConvert job completion via EventBridge ---
+resource "aws_cloudwatch_event_rule" "mediaconvert_complete" {
+  name        = "${var.app_name}-mediaconvert-state"
+  description = "MediaConvert job COMPLETE/ERROR → video pipeline Lambda"
+
+  event_pattern = jsonencode({
+    source        = ["aws.mediaconvert"]
+    "detail-type" = ["MediaConvert Job State Change"]
+    detail = {
+      status = ["COMPLETE", "ERROR"]
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "mediaconvert_complete" {
+  rule      = aws_cloudwatch_event_rule.mediaconvert_complete.name
+  target_id = "video-pipeline-lambda"
+  arn       = aws_lambda_function.video_pipeline.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge" {
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.video_pipeline.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.mediaconvert_complete.arn
 }
 
 # =============================================================================
@@ -812,6 +1055,22 @@ output "s3_bucket" {
 
 output "cloudfront_domain" {
   value = aws_cloudfront_distribution.assets.domain_name
+}
+
+output "mediaconvert_role_arn" {
+  description = "MediaConvert service role ARN used by the transcode Lambda"
+  value       = aws_iam_role.mediaconvert.arn
+}
+
+output "video_pipeline_lambda" {
+  description = "Name of the video transcode Lambda (for log tailing / redeploys)"
+  value       = aws_lambda_function.video_pipeline.function_name
+}
+
+output "webhook_secret" {
+  description = "Shared secret for the transcode completion webhook"
+  value       = random_password.webhook_secret.result
+  sensitive   = true
 }
 
 output "payload_secret_arn" {

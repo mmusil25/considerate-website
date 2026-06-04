@@ -5,7 +5,7 @@
 
 # --- Required ----------------------------------------------------------------
 
-app_name    = "my-site"                    # prefix for all AWS resource names
+app_name    = "my-site" # prefix for all AWS resource names
 db_password = "choose-a-strong-password"
 
 # --- Domain / HTTPS ----------------------------------------------------------
@@ -28,7 +28,7 @@ use_route53 = true
 
 # --- Image (fill in after step 3 of the standup guide) -----------------------
 
-container_image = "placeholder"   # replace with full ECR URI
+container_image = "placeholder" # replace with full ECR URI
 
 # --- Optional (defaults shown) -----------------------------------------------
 

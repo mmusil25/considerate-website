@@ -61,7 +61,14 @@ export default async function ProjectsPage() {
 }
 
 function ProjectCard({ project }: { project: Project }) {
-  const techs = project.technologies?.map((t) => t.tech).filter(Boolean) ?? []
+  const techs = project.technologies
+    ?.map((t) => {
+      if (!t.tech) return null
+      if (typeof t.tech === 'string') return t.tech
+      if (typeof t.tech === 'object' && 'name' in t.tech) return (t.tech as any).name
+      return null
+    })
+    .filter(Boolean) ?? []
   const date = project.publishedAt
     ? new Date(project.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
     : null
@@ -126,9 +133,9 @@ function ProjectCard({ project }: { project: Project }) {
 
         {techs.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-            {techs.map((tech) => (
+            {techs.map((tech, idx) => (
               <span
-                key={tech}
+                key={`${tech}-${idx}`}
                 style={{
                   fontFamily: "'Work Sans', sans-serif",
                   fontSize: '10px',

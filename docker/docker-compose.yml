@@ -116,6 +116,14 @@ services:
       AWS_REGION: us-east-2
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
+      # --- Video pipeline ---
+      # No CloudFront/MediaConvert/Lambda locally: CLOUDFRONT_DOMAIN stays blank so
+      # playback falls back to the MinIO endpoint, and uploads are marked ready
+      # without transcoding (see app/src/app/api/videos/upload/complete).
+      CLOUDFRONT_DOMAIN: ""
+      VIDEO_SOURCE_PREFIX: videos/source/
+      VIDEO_HLS_PREFIX: videos/hls/
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-dev-webhook-secret-change-me}
       # --- Builder.io ---
       NEXT_PUBLIC_BUILDER_API_KEY: ${NEXT_PUBLIC_BUILDER_API_KEY:-}
       # Next.js standalone binds to 127.0.0.1 by default; 0.0.0.0 makes it

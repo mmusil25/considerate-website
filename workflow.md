@@ -1,5 +1,9 @@
 # Development Workflow
 
+![Development Workflow diagram](workflow.png)
+
+*Source: [`workflow.drawio`](workflow.drawio) — edit in [diagrams.net](https://app.diagrams.net) and re-export with `drawio --export --format png --scale 2 --border 10 --output workflow.png workflow.drawio`.*
+
 There are three modes. You pick the one that matches what you're trying to do.
 
 ---

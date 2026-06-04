@@ -3,6 +3,8 @@
 
 Before writing any code or making changes, please:
 
+0. Read README.md it contains crucial context concerning WHY I'm building this website. 
+
 1. **Read all project files** in the parent directory (`../`) and all subdirectories
 2. **Gather important context** including:
     - Project structure and organization

@@ -29,6 +29,16 @@
     "type": "string",
     "value": "481923712132.dkr.ecr.us-east-2.amazonaws.com/considerate-site"
   },
+  "mediaconvert_role_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:iam::481923712132:role/considerate-site-mediaconvert-role"
+  },
+  "migrator_task_definition_family": {
+    "sensitive": false,
+    "type": "string",
+    "value": "considerate-site-migrator"
+  },
   "payload_secret_arn": {
     "sensitive": false,
     "type": "string",
@@ -48,5 +58,15 @@
     "sensitive": false,
     "type": "string",
     "value": "considerate-site-assets-481923712132"
+  },
+  "video_pipeline_lambda": {
+    "sensitive": false,
+    "type": "string",
+    "value": "considerate-site-video-pipeline"
+  },
+  "webhook_secret": {
+    "sensitive": true,
+    "type": "string",
+    "value": "Mdd3HPpQW14MNiSPPYk9NFrbmFAeZ2hKT5nOtoV1KfMK4SpZ"
   }
 }
