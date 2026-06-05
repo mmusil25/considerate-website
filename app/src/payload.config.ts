@@ -61,6 +61,13 @@ export default buildConfig({
     },
     {
       slug: 'media',
+      // Media files are served on public pages (hero/title images, body images,
+      // video posters). Payload is secure-by-default: without this, `read`
+      // requires an authenticated user, so anonymous visitors — and the
+      // server-side next/image optimizer (which carries no auth cookie) — get a
+      // 403 and the image fails to render. Public read makes media fetchable by
+      // everyone while create/update/delete stay admin-only by default.
+      access: { read: () => true },
       upload: true,
       fields: [],
     },

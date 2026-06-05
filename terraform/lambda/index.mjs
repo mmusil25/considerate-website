@@ -144,6 +144,10 @@ function buildJobSettings(input, hlsDestination, posterDestination) {
                 Codec: 'H_264',
                 H264Settings: {
                   RateControlMode: 'QVBR',
+                  // Automated ABR REQUIRES an explicit HQ tuning level; without it
+                  // CreateJob is rejected 400 ("qualityTuningLevel is a required
+                  // property"). MULTI_PASS_HQ matches the preserve-source-quality policy.
+                  QualityTuningLevel: 'MULTI_PASS_HQ',
                   SceneChangeDetect: 'TRANSITION_DETECTION',
                   FramerateControl: 'INITIALIZE_FROM_SOURCE',
                   GopSizeUnits: 'AUTO',
