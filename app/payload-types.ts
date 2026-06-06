@@ -796,6 +796,23 @@ export interface CollectionsWidget {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "InlineVideoBlock".
+ */
+export interface InlineVideoBlock {
+  /**
+   * Pick a clip, or create + upload a new one inline.
+   */
+  video: number | Video;
+  /**
+   * Optional caption shown beneath the clip.
+   */
+  caption?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'video';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "auth".
  */
 export interface Auth {
