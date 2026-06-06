@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import { RichText } from '@payloadcms/richtext-lexical/react'
+import { richTextConverters } from '../../components/richTextConverters'
 import type { Metadata } from 'next'
 import config from '@/payload.config'
 import { SiteHeader } from '../../components/SiteHeader'
@@ -11,7 +12,33 @@ import { cdnUrl } from '@/lib/cdn'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import type { Media, Video } from '../../../../../payload-types'
 
-export const dynamic = 'force-dynamic'
+// ISR: render on demand, then serve a cached copy for `revalidate` seconds and
+// refresh in the background. This sends `Cache-Control: s-maxage=60,
+// stale-while-revalidate`, which CloudFront honors — so pages are edge-cached
+// and instant instead of re-rendered on the container every request (the old
+// `force-dynamic` sent `private, no-cache`, which no CDN will cache). CMS edits
+// appear within ~`revalidate`s. `dynamicParams` lets new slugs render on first
+// hit rather than 404.
+export const revalidate = 60
+export const dynamicParams = true
+
+// A dynamic segment with NO generateStaticParams is rendered fully dynamically
+// (ƒ) and ignores `revalidate` entirely — that's why the page kept sending
+// `private, no-cache` even after dropping force-dynamic. Exporting this (even
+// returning []) flips the route into static-with-ISR, so on-demand renders are
+// cached for `revalidate`s and emit a CDN-cacheable `s-maxage`. The build
+// container has no DB, so we tolerate a connection failure and fall back to []:
+// nothing is prebuilt, each slug renders + caches on first hit. When a DB is
+// reachable at build, known slugs are prerendered for an instant first hit.
+export async function generateStaticParams() {
+  try {
+    const payload = await getPayload({ config })
+    const { docs } = await payload.find({ collection: 'projects', depth: 0, limit: 1000 })
+    return docs.map((p) => ({ slug: String(p.slug) }))
+  } catch {
+    return []
+  }
+}
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -197,7 +224,8 @@ export default async function ProjectPage({ params }: Props) {
             <p
               style={{
                 fontFamily: "'Source Sans 3', 'Source Sans Pro', sans-serif",
-                fontSize: '15px',
+                fontSize: '13px',
+                fontStyle: 'italic',
                 color: '#444',
                 lineHeight: 1.65,
                 margin: '0 0 28px',
@@ -210,6 +238,7 @@ export default async function ProjectPage({ params }: Props) {
           {/* Rich text body */}
           {project.body && (
             <div
+              className="rich-text"
               style={{
                 fontFamily: "'Source Sans 3', 'Source Sans Pro', sans-serif",
                 fontSize: '15px',
@@ -218,7 +247,7 @@ export default async function ProjectPage({ params }: Props) {
                 marginBottom: '32px',
               }}
             >
-              <RichText data={project.body} />
+              <RichText data={project.body} converters={richTextConverters} />
             </div>
           )}
 

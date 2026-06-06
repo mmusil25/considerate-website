@@ -13,3 +13,79 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Restore heading hierarchy inside Payload rich-text bodies.
+   Tailwind Preflight resets headings to inherit font-size/weight, which
+   makes RichText <h1>–<h6> render at body-text size. */
+.rich-text h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.5em 0 0.5em;
+}
+.rich-text h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+}
+.rich-text h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 1.3em 0 0.4em;
+}
+.rich-text h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.2em 0 0.4em;
+}
+.rich-text h5,
+.rich-text h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1.1em 0 0.4em;
+}
+.rich-text p {
+  margin: 0 0 1em;
+}
+.rich-text ul,
+.rich-text ol {
+  margin: 0 0 1em;
+  padding-left: 1.5em;
+}
+.rich-text ul {
+  list-style: disc;
+}
+.rich-text ol {
+  list-style: decimal;
+}
+.rich-text a {
+  color: #185fa5;
+  text-decoration: underline;
+}
+.rich-text strong {
+  font-weight: 600;
+}
+.rich-text em {
+  font-style: italic;
+}
+.rich-text blockquote {
+  border-left: 3px solid #185fa5;
+  padding-left: 1em;
+  margin: 0 0 1em;
+  color: #555;
+}
+.rich-text figure {
+  max-width: 100%;
+}
+.rich-text figure img {
+  max-width: 100%;
+}
+/* Contain floated (left/right wrapped) images so they don't spill past the
+   rich-text block into the gallery/footer below. */
+.rich-text::after {
+  content: '';
+  display: table;
+  clear: both;
+}

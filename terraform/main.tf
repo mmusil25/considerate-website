@@ -852,7 +852,9 @@ resource "aws_lb_listener" "https" {
   }
 }
 
-# Route53 mode: A records for root and www → ALB
+# Route53 mode: A records for root and www. Target CloudFront when the app CDN
+# is enabled (see cdn_app.tf), otherwise the ALB directly. Flipping
+# `enable_app_cdn` swaps these back to the ALB — the rollback path.
 resource "aws_route53_record" "app" {
   count   = local.has_route53 ? 1 : 0
   zone_id = data.aws_route53_zone.main[0].zone_id
@@ -860,9 +862,9 @@ resource "aws_route53_record" "app" {
   type    = "A"
 
   alias {
-    name                   = aws_lb.main.dns_name
-    zone_id                = aws_lb.main.zone_id
-    evaluate_target_health = true
+    name                   = local.app_cdn_enabled ? aws_cloudfront_distribution.app[0].domain_name : aws_lb.main.dns_name
+    zone_id                = local.app_cdn_enabled ? aws_cloudfront_distribution.app[0].hosted_zone_id : aws_lb.main.zone_id
+    evaluate_target_health = local.app_cdn_enabled ? false : true
   }
 }
 
@@ -873,9 +875,9 @@ resource "aws_route53_record" "app_www" {
   type    = "A"
 
   alias {
-    name                   = aws_lb.main.dns_name
-    zone_id                = aws_lb.main.zone_id
-    evaluate_target_health = true
+    name                   = local.app_cdn_enabled ? aws_cloudfront_distribution.app[0].domain_name : aws_lb.main.dns_name
+    zone_id                = local.app_cdn_enabled ? aws_cloudfront_distribution.app[0].hosted_zone_id : aws_lb.main.zone_id
+    evaluate_target_health = local.app_cdn_enabled ? false : true
   }
 }
 

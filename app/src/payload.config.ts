@@ -1,6 +1,6 @@
 import { buildConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { lexicalEditor, UploadFeature } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -24,7 +24,24 @@ const dirname = path.dirname(filename)
 const s3Plugin = s3Storage({
   collections: {
     // `prefix` lets many sites share one bucket: e.g. "markmusil/", "bakery/"
-    media: { prefix: process.env.S3_PREFIX || '' },
+    media: {
+      prefix: process.env.S3_PREFIX || '',
+      // In production, serve media straight from CloudFront (edge-cached) rather
+      // than proxying every byte through the app container via /api/media/file —
+      // that route ships no Cache-Control and re-streams the object on every hit.
+      // `media` read access is already public (`read: () => true`), so dropping
+      // the access-control route changes nothing security-wise; it just moves
+      // delivery to the CDN. next.config already allow-lists CLOUDFRONT_DOMAIN so
+      // next/image can optimize these URLs. Locally (no CloudFront) we keep the
+      // proxy route so dev still works against MinIO.
+      ...(process.env.CLOUDFRONT_DOMAIN
+        ? {
+            disablePayloadAccessControl: true,
+            generateFileURL: ({ filename, prefix }) =>
+              `https://${process.env.CLOUDFRONT_DOMAIN}/${prefix ? `${prefix}/` : ''}${filename}`,
+          }
+        : {}),
+    },
   },
   bucket: process.env.S3_BUCKET || '',
   config: {
@@ -54,7 +71,59 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  editor: lexicalEditor(),
+  // Extend the editor's default Upload feature so editors can control how an
+  // image embedded in rich-text body renders: size + alignment/text-wrap + alt.
+  // These per-image values are stored on the lexical upload node's `fields` and
+  // applied by a custom JSX converter on the frontend (see projects/[slug]/page).
+  // Re-declaring UploadFeature overrides the one already in defaultFeatures (same
+  // key, 'upload'), so we keep all other defaults and only customize uploads.
+  editor: lexicalEditor({
+    features: ({ defaultFeatures }) => [
+      ...defaultFeatures,
+      UploadFeature({
+        collections: {
+          media: {
+            fields: [
+              {
+                name: 'alignment',
+                type: 'select',
+                defaultValue: 'center',
+                options: [
+                  { label: 'Center', value: 'center' },
+                  { label: 'Left (text wraps right)', value: 'left' },
+                  { label: 'Right (text wraps left)', value: 'right' },
+                  { label: 'Full width', value: 'full' },
+                ],
+                admin: { description: 'How this image sits relative to the surrounding text.' },
+              },
+              {
+                name: 'size',
+                type: 'select',
+                defaultValue: 'medium',
+                options: [
+                  { label: 'Small (25%)', value: 'small' },
+                  { label: 'Medium (50%)', value: 'medium' },
+                  { label: 'Large (75%)', value: 'large' },
+                  { label: 'Original / Full (100%)', value: 'full' },
+                ],
+                admin: { description: 'Display width, as a fraction of the content column.' },
+              },
+              {
+                name: 'alt',
+                type: 'text',
+                admin: { description: 'Alt text for accessibility and SEO.' },
+              },
+              {
+                name: 'caption',
+                type: 'text',
+                admin: { description: 'Optional caption shown beneath the image.' },
+              },
+            ],
+          },
+        },
+      }),
+    ],
+  }),
   collections: [
     {
       slug: 'users',

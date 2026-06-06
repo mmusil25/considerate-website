@@ -4,17 +4,22 @@ import { RichText } from '@payloadcms/richtext-lexical/react'
 import config from '@/payload.config'
 import { SiteHeader } from '../../../components/SiteHeader'
 
-export const dynamic = 'force-dynamic'
+// ISR so CloudFront can edge-cache this page. Static route prerendered at build
+// (no DB) -> try/catch bakes an empty fallback; regenerated with real data on
+// first request and every `revalidate`s (warmed after deploy).
+export const revalidate = 60
 
 // CAPTRUST demo — advisor directory. Each advisor references one office
 // location (populated via depth), which links through to the locations page.
 export default async function AdvisorsDemoPage() {
-  const payload = await getPayload({ config })
-  const { docs: advisors } = await payload.find({
-    collection: 'advisors',
-    sort: 'lastName',
-    depth: 1,
-  })
+  let advisors: any[] = []
+  try {
+    const payload = await getPayload({ config })
+    const res = await payload.find({ collection: 'advisors', sort: 'lastName', depth: 1 })
+    advisors = res.docs
+  } catch {
+    advisors = []
+  }
 
   return (
     <main style={{ backgroundColor: '#E6F1FB', minHeight: '100vh' }}>

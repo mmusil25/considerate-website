@@ -4,15 +4,22 @@ import config from '@/payload.config'
 import { SiteHeader } from '../components/SiteHeader'
 import type { Project } from '../../../../payload-types'
 
-export const dynamic = 'force-dynamic'
+// ISR so CloudFront can edge-cache this list (was force-dynamic -> private,
+// no-cache). This is a static route, so it's prerendered at build where there's
+// no DB — the try/catch lets the build bake an empty fallback instead of
+// failing; the page regenerates with real data on first request and every
+// `revalidate`s thereafter (we warm it right after deploy).
+export const revalidate = 60
 
 export default async function ProjectsPage() {
-  const payload = await getPayload({ config })
-  const { docs: projects } = await payload.find({
-    collection: 'projects',
-    sort: '-publishedAt',
-    depth: 1,
-  })
+  let projects: Project[] = []
+  try {
+    const payload = await getPayload({ config })
+    const res = await payload.find({ collection: 'projects', sort: '-publishedAt', depth: 1 })
+    projects = res.docs
+  } catch {
+    projects = []
+  }
 
   return (
     <main style={{ backgroundColor: '#E6F1FB', minHeight: '100vh' }}>

@@ -3,17 +3,22 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '../../../components/SiteHeader'
 
-export const dynamic = 'force-dynamic'
+// ISR so CloudFront can edge-cache this page. Static route prerendered at build
+// (no DB) -> try/catch bakes an empty fallback; regenerated with real data on
+// first request and every `revalidate`s (warmed after deploy).
+export const revalidate = 60
 
 // CAPTRUST demo — office directory. Each location lists its advisors via the
 // `employees` join field (populated from the advisors' `location` reference).
 export default async function LocationsDemoPage() {
-  const payload = await getPayload({ config })
-  const { docs: locations } = await payload.find({
-    collection: 'locations',
-    sort: 'name',
-    depth: 2, // populate officeImage + the employees join (advisors)
-  })
+  let locations: any[] = []
+  try {
+    const payload = await getPayload({ config })
+    const res = await payload.find({ collection: 'locations', sort: 'name', depth: 2 })
+    locations = res.docs
+  } catch {
+    locations = []
+  }
 
   return (
     <main style={{ backgroundColor: '#E6F1FB', minHeight: '100vh' }}>

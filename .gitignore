@@ -8,3 +8,4 @@ app/.next/
 terraform/terraform.tfstate*
 terraform/terraform.tfvars
 workjournal_and_highlevelplan.md
+*.tsbuildinfo
