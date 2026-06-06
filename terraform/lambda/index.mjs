@@ -127,7 +127,7 @@ function buildJobSettings(input, hlsDestination, posterDestination) {
       {
         Name: 'HLS',
         AutomatedEncodingSettings: {
-          AbrSettings: { MaxAbrBitrate: 16000000, MaxRenditions: 6, MinAbrBitrate: 600000 },
+          AbrSettings: { MaxAbrBitrate: 28000000, MaxRenditions: 6, MinAbrBitrate: 600000 },
         },
         OutputGroupSettings: {
           Type: 'HLS_GROUP_SETTINGS',

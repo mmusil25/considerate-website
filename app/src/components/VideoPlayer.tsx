@@ -63,17 +63,22 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
         hls = new Hls({
           enableWorker: true,
           // hls.js defaults to a 500 kbps bandwidth estimate, so playback opens
-          // on the lowest rung (~480p) and only climbs over several segments —
-          // a short clip ends before it ever ramps up. Start from a high
-          // estimate so fast connections jump near the top immediately; ABR
-          // still steps down for genuinely slow networks.
-          abrEwmaDefaultEstimate: 10_000_000,
-          // Don't downscale quality to the (possibly small) player box — the
-          // user explicitly wants full quality.
+          // on the lowest rung (~480p). These are short (~4s) clips — basically
+          // ONE segment per rung — so whatever level it opens on is the WHOLE
+          // video; there's no time to ramp. Assume a fat pipe so it opens on the
+          // top rung; hls.js emergency-downswitches mid-segment if a viewer's
+          // connection genuinely can't keep up.
+          abrEwmaDefaultEstimate: 40_000_000,
+          // Don't downscale quality to the (possibly small) player box.
           capLevelToPlayerSize: false,
         })
         hls.loadSource(manifestUrl)
         hls.attachMedia(video)
+        // Belt-and-suspenders: force the first fragment to the highest rung,
+        // independent of the bandwidth estimate, so short clips never open soft.
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (hls) hls.startLevel = hls.levels.length - 1
+        })
       } else if (sourceUrl) {
         video.src = sourceUrl // last-resort fallback
       }
