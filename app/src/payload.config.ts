@@ -1,6 +1,6 @@
 import { buildConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { lexicalEditor, UploadFeature } from '@payloadcms/richtext-lexical'
+import { lexicalEditor, UploadFeature, BlocksFeature } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -121,6 +121,35 @@ export default buildConfig({
             ],
           },
         },
+      }),
+      // Inline video clips: drop a Video block anywhere in a project body and
+      // reference a doc from the `videos` collection (pick an existing clip or
+      // create+upload a new one inline). The frontend converter renders it with
+      // the same adaptive <VideoPlayer> (HLS) used for the main project video,
+      // so projects with multiple short clips stream them all. Block data lives
+      // inside the lexical body JSON — no separate table, so no DB migration.
+      BlocksFeature({
+        blocks: [
+          {
+            slug: 'video',
+            interfaceName: 'InlineVideoBlock',
+            labels: { singular: 'Video', plural: 'Videos' },
+            fields: [
+              {
+                name: 'video',
+                type: 'relationship',
+                relationTo: 'videos',
+                required: true,
+                admin: { description: 'Pick a clip, or create + upload a new one inline.' },
+              },
+              {
+                name: 'caption',
+                type: 'text',
+                admin: { description: 'Optional caption shown beneath the clip.' },
+              },
+            ],
+          },
+        ],
       }),
     ],
   }),

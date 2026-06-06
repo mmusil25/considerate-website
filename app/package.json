@@ -16,6 +16,7 @@
     "generate:types": "payload generate:types"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudfront": "^3.1063.0",
     "@aws-sdk/s3-request-presigner": "^3.1061.0",
     "@builder.io/react": "^3.0.0",
     "@payloadcms/db-postgres": "3.85.0",

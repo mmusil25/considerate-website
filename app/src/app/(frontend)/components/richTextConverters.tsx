@@ -1,5 +1,7 @@
 import type { JSXConvertersFunction } from '@payloadcms/richtext-lexical/react'
 import type { CSSProperties } from 'react'
+import { VideoPlayer } from '@/components/VideoPlayer'
+import { cdnUrl } from '@/lib/cdn'
 
 // Display width as a fraction of the content column, keyed by the `size` field
 // configured on the Upload feature in payload.config.ts.
@@ -16,6 +18,43 @@ const SIZE_TO_WIDTH: Record<string, string> = {
 // falls through to the default converters.
 export const richTextConverters: JSXConvertersFunction = ({ defaultConverters }) => ({
   ...defaultConverters,
+  blocks: {
+    // Inline video clip (the `video` block from payload.config.ts). `node.fields.video`
+    // is the populated Video doc when the body is queried at depth >= 2.
+    video: ({ node }) => {
+      const fields = (node.fields ?? {}) as { video?: unknown; caption?: string }
+      const v =
+        typeof fields.video === 'object' && fields.video
+          ? (fields.video as Record<string, unknown>)
+          : null
+      // Unpopulated (still an id) or not finished transcoding -> nothing to play.
+      if (!v || v.status !== 'ready') return null
+
+      return (
+        <figure style={{ margin: '16px 0' }}>
+          <VideoPlayer
+            manifestUrl={cdnUrl(v.hlsManifestKey as string | null)}
+            sourceUrl={cdnUrl(v.sourceKey as string | null)}
+            sourceMimeType={v.sourceMimeType as string | null}
+            poster={cdnUrl(v.posterKey as string | null)}
+          />
+          {fields.caption ? (
+            <figcaption
+              style={{
+                fontSize: '12px',
+                fontStyle: 'italic',
+                color: '#666',
+                marginTop: '6px',
+                textAlign: 'center',
+              }}
+            >
+              {fields.caption}
+            </figcaption>
+          ) : null}
+        </figure>
+      )
+    },
+  },
   upload: ({ node }) => {
     // value is the populated media doc (depth >= 1); fields holds our extra
     // controls. If unpopulated (still an id) we can't render an image.

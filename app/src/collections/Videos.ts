@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { purge } from '../lib/revalidate'
 
 /**
  * Videos are NOT a Payload `upload` collection. The source files are 4K60 multi-GB
@@ -10,6 +11,14 @@ import type { CollectionConfig } from 'payload'
 const Videos: CollectionConfig = {
   slug: 'videos',
   auth: false,
+  // When a video changes — including the transcode pipeline flipping status to
+  // `ready` via the callback — refresh the project pages that may embed it.
+  // We don't track which projects reference a clip, so purge them broadly.
+  hooks: {
+    afterChange: [
+      () => purge({ paths: ['/projects'], routes: ['/projects/[slug]'], cdn: ['/projects', '/projects/*'] }),
+    ],
+  },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'updatedAt'],

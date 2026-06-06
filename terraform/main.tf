@@ -533,6 +533,18 @@ data "aws_iam_policy_document" "ecs_task" {
     actions   = ["s3:ListBucket", "s3:ListBucketMultipartUploads"]
     resources = [aws_s3_bucket.assets.arn]
   }
+
+  # Let the app purge the CDN when content changes (Payload afterChange/afterDelete
+  # hooks -> CreateInvalidation on the app distribution). Only present when the app
+  # CDN exists; the guard keeps the app[0] reference valid when it's disabled.
+  dynamic "statement" {
+    for_each = local.app_cdn_enabled ? [1] : []
+    content {
+      sid       = "CloudFrontInvalidate"
+      actions   = ["cloudfront:CreateInvalidation"]
+      resources = [aws_cloudfront_distribution.app[0].arn]
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "ecs_task" {
@@ -658,6 +670,9 @@ resource "aws_ecs_task_definition" "app" {
       { name = "PAYLOAD_PUBLIC_SERVER_URL", value = local.public_url },
       # --- Video pipeline ---
       { name = "CLOUDFRONT_DOMAIN", value = aws_cloudfront_distribution.assets.domain_name },
+      # App distribution that fronts apex+www; the app issues CloudFront
+      # invalidations against it on content change. Empty when the app CDN is off.
+      { name = "APP_CLOUDFRONT_DISTRIBUTION_ID", value = try(aws_cloudfront_distribution.app[0].id, "") },
       { name = "VIDEO_SOURCE_PREFIX", value = "videos/source/" },
       { name = "VIDEO_HLS_PREFIX", value = "videos/hls/" },
       # Shared secret the transcode Lambda uses to authenticate its completion

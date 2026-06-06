@@ -1,8 +1,28 @@
 import type { CollectionConfig } from 'payload'
+import { purge } from '../lib/revalidate'
 
 const Projects: CollectionConfig = {
   slug: 'projects',
   auth: false,
+  // Refresh the live (edge-cached) pages when a project is saved or removed, so
+  // edits show up without waiting for the CDN's stale-while-revalidate window.
+  hooks: {
+    afterChange: [
+      ({ doc }) =>
+        purge({
+          paths: [`/projects/${doc.slug}`, '/projects'],
+          cdn: [`/projects/${doc.slug}`, '/projects'],
+        }),
+    ],
+    afterDelete: [
+      ({ doc }) =>
+        purge({
+          paths: ['/projects'],
+          routes: ['/projects/[slug]'],
+          cdn: [`/projects/${doc.slug}`, '/projects'],
+        }),
+    ],
+  },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'client', 'publishedAt', 'featured'],
