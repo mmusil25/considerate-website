@@ -9,3 +9,4 @@ terraform/terraform.tfstate*
 terraform/terraform.tfvars
 workjournal_and_highlevelplan.md
 *.tsbuildinfo
+.claude/status-jun6.md
