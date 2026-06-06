@@ -8,6 +8,8 @@ import Projects from './collections/Projects.ts'
 import Technologies from './collections/Technologies.ts'
 import SiteSettings from './collections/SiteSettings.ts'
 import Videos from './collections/Videos.ts'
+import Advisors from './collections/Advisors.ts'
+import Locations from './collections/Locations.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -75,6 +77,9 @@ export default buildConfig({
     SiteSettings,
     Videos,
     Projects,
+    // CAPTRUST demo collections
+    Advisors,
+    Locations,
   ],
   db: postgresAdapter({
     pool: {

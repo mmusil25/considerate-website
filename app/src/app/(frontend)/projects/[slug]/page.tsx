@@ -142,7 +142,7 @@ export default async function ProjectPage({ params }: Props) {
                 margin: '0 0 16px',
               }}
             >
-              {project.client}
+              Client: {project.client}
               {project.client && date ? ' · ' : ''}
               {date}
             </p>

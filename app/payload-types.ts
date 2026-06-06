@@ -73,12 +73,18 @@ export interface Config {
     'site-settings': SiteSetting;
     videos: Video;
     projects: Project;
+    advisors: Advisor;
+    locations: Location;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    locations: {
+      employees: 'advisors';
+    };
+  };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -86,6 +92,8 @@ export interface Config {
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     videos: VideosSelect<false> | VideosSelect<true>;
     projects: ProjectsSelect<false> | ProjectsSelect<true>;
+    advisors: AdvisorsSelect<false> | AdvisorsSelect<true>;
+    locations: LocationsSelect<false> | LocationsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -407,6 +415,70 @@ export interface Project {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "advisors".
+ */
+export interface Advisor {
+  id: number;
+  firstName: string;
+  lastName: string;
+  headshot?: (number | null) | Media;
+  bio?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * The office this advisor works from
+   */
+  location?: (number | null) | Location;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locations".
+ */
+export interface Location {
+  id: number;
+  /**
+   * Office name, e.g. "Raleigh Headquarters"
+   */
+  name: string;
+  /**
+   * Full street address
+   */
+  address?: string | null;
+  coordinates?: {
+    /**
+     * e.g. 35.7796
+     */
+    latitude?: number | null;
+    /**
+     * e.g. -78.6382
+     */
+    longitude?: number | null;
+  };
+  officeImage?: (number | null) | Media;
+  employees?: {
+    docs?: (number | Advisor)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -452,6 +524,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'projects';
         value: number | Project;
+      } | null)
+    | ({
+        relationTo: 'advisors';
+        value: number | Advisor;
+      } | null)
+    | ({
+        relationTo: 'locations';
+        value: number | Location;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -630,6 +710,37 @@ export interface ProjectsSelect<T extends boolean = true> {
               id?: T;
             };
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "advisors_select".
+ */
+export interface AdvisorsSelect<T extends boolean = true> {
+  firstName?: T;
+  lastName?: T;
+  headshot?: T;
+  bio?: T;
+  location?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locations_select".
+ */
+export interface LocationsSelect<T extends boolean = true> {
+  name?: T;
+  address?: T;
+  coordinates?:
+    | T
+    | {
+        latitude?: T;
+        longitude?: T;
+      };
+  officeImage?: T;
+  employees?: T;
   updatedAt?: T;
   createdAt?: T;
 }

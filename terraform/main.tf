@@ -308,10 +308,23 @@ data "aws_cloudfront_response_headers_policy" "cors" {
   name = "Managed-SimpleCORS"
 }
 
+# Origin Access Control — lets CloudFront sign (SigV4) its requests to S3 so the
+# bucket can stay fully private (Public Access Block on, no public ACLs). Without
+# this the distribution hits the S3 REST endpoint anonymously and every object
+# returns 403 AccessDenied — which is exactly what broke HLS playback.
+resource "aws_cloudfront_origin_access_control" "assets" {
+  name                              = "${var.app_name}-assets-oac"
+  description                       = "OAC for ${var.app_name} assets bucket"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 resource "aws_cloudfront_distribution" "assets" {
   origin {
-    domain_name = aws_s3_bucket.assets.bucket_regional_domain_name
-    origin_id   = "S3Assets"
+    domain_name              = aws_s3_bucket.assets.bucket_regional_domain_name
+    origin_id                = "S3Assets"
+    origin_access_control_id = aws_cloudfront_origin_access_control.assets.id
   }
 
   enabled = true
@@ -363,6 +376,34 @@ resource "aws_cloudfront_distribution" "assets" {
   tags = {
     Name = "${var.app_name}-cdn"
   }
+}
+
+# Bucket policy allowing ONLY this CloudFront distribution to read objects.
+# Scoped to the service principal + SourceArn condition, so it is not a "public"
+# policy and coexists with Public Access Block / BlockPublicPolicy.
+data "aws_iam_policy_document" "assets_cloudfront" {
+  statement {
+    sid       = "AllowCloudFrontServicePrincipalReadOnly"
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.assets.arn}/*"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.assets.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "assets_cloudfront" {
+  bucket = aws_s3_bucket.assets.id
+  policy = data.aws_iam_policy_document.assets_cloudfront.json
 }
 
 # =============================================================================
