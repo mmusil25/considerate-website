@@ -115,7 +115,11 @@ function buildJobSettings(input, hlsDestination, posterDestination) {
       {
         FileInput: input,
         TimecodeSource: 'ZEROBASED',
-        VideoSelector: {},
+        // Rotate: AUTO honors the source's rotation metadata. Phone videos shot
+        // in portrait are stored as landscape pixels + a 90° rotation flag;
+        // without this, MediaConvert bakes the sideways pixels and the clip
+        // plays rotated 90°. AUTO applies the flag so portrait stays portrait.
+        VideoSelector: { Rotate: 'AUTO' },
         AudioSelectors: { 'Audio Selector 1': { DefaultSelection: 'DEFAULT' } },
       },
     ],

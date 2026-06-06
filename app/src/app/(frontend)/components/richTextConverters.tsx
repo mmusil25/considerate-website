@@ -37,6 +37,8 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
             sourceUrl={cdnUrl(v.sourceKey as string | null)}
             sourceMimeType={v.sourceMimeType as string | null}
             poster={cdnUrl(v.posterKey as string | null)}
+            size={v.displaySize as 'small' | 'medium' | 'large' | 'full' | null}
+            align={v.displayAlignment as 'left' | 'center' | 'right' | null}
           />
           {fields.caption ? (
             <figcaption

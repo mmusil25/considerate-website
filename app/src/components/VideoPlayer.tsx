@@ -11,6 +11,17 @@ type Props = {
   /** MIME type of the original, used to feature-detect direct playback. */
   sourceMimeType?: string | null
   poster?: string | null
+  /** Display width cap. Portrait clips look best at small/medium. */
+  size?: 'small' | 'medium' | 'large' | 'full' | null
+  /** Horizontal placement of the (capped-width) player within the column. */
+  align?: 'left' | 'center' | 'right' | null
+}
+
+const SIZE_TO_MAXWIDTH: Record<string, string> = {
+  small: '240px',
+  medium: '400px',
+  large: '640px',
+  full: '100%',
 }
 
 /**
@@ -23,7 +34,7 @@ type Props = {
  *    requests — preserving exact source quality/codecs.
  *  - With no HLS (local dev), fall back to playing the source directly.
  */
-export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster }: Props) {
+export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, size, align }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [mode, setMode] = useState<'hls' | 'original'>('hls')
   const [canPlayOriginal, setCanPlayOriginal] = useState(false)
@@ -66,8 +77,12 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster }: 
 
   if (!manifestUrl && !sourceUrl) return null
 
+  const maxWidth = SIZE_TO_MAXWIDTH[size ?? 'full'] ?? '100%'
+  const justify = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center'
+
   return (
-    <div style={{ marginBottom: 32 }}>
+    <div style={{ marginBottom: 32, display: 'flex', justifyContent: justify }}>
+      <div style={{ width: '100%', maxWidth }}>
       <video
         ref={videoRef}
         controls
@@ -95,6 +110,7 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster }: 
           {mode === 'hls' ? 'Max quality (original)' : 'Adaptive streaming (recommended)'}
         </button>
       )}
+      </div>
     </div>
   )
 }

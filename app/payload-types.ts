@@ -289,6 +289,14 @@ export interface Video {
    */
   title: string;
   /**
+   * Display width. Portrait (phone) clips look best at Small or Medium.
+   */
+  displaySize?: ('small' | 'medium' | 'large' | 'full') | null;
+  /**
+   * Horizontal placement within the column.
+   */
+  displayAlignment?: ('center' | 'left' | 'right') | null;
+  /**
    * Set automatically by the upload + transcode pipeline.
    */
   status?: ('empty' | 'uploading' | 'processing' | 'ready' | 'error') | null;
@@ -658,6 +666,8 @@ export interface SiteSettingsSelect<T extends boolean = true> {
  */
 export interface VideosSelect<T extends boolean = true> {
   title?: T;
+  displaySize?: T;
+  displayAlignment?: T;
   status?: T;
   sourceKey?: T;
   sourceMimeType?: T;

@@ -219,6 +219,8 @@ export default async function ProjectPage({ params }: Props) {
               sourceUrl={cdnUrl(video.sourceKey)}
               sourceMimeType={video.sourceMimeType}
               poster={cdnUrl(video.posterKey)}
+              size={video.displaySize}
+              align={video.displayAlignment}
             />
           )}
 

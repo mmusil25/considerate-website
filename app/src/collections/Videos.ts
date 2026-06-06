@@ -40,6 +40,38 @@ const Videos: CollectionConfig = {
       required: true,
       admin: { description: 'Internal label, e.g. "Bakery build timelapse"' },
     },
+    // --- Presentation controls (how the clip displays on the page) ---
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'displaySize',
+          type: 'select',
+          defaultValue: 'full',
+          options: [
+            { label: 'Small (240px)', value: 'small' },
+            { label: 'Medium (400px)', value: 'medium' },
+            { label: 'Large (640px)', value: 'large' },
+            { label: 'Full width', value: 'full' },
+          ],
+          admin: {
+            width: '50%',
+            description: 'Display width. Portrait (phone) clips look best at Small or Medium.',
+          },
+        },
+        {
+          name: 'displayAlignment',
+          type: 'select',
+          defaultValue: 'center',
+          options: [
+            { label: 'Center', value: 'center' },
+            { label: 'Left', value: 'left' },
+            { label: 'Right', value: 'right' },
+          ],
+          admin: { width: '50%', description: 'Horizontal placement within the column.' },
+        },
+      ],
+    },
     {
       // The custom uploader drives the whole direct-to-S3 flow and writes the keys
       // below via the API routes. It renders above the data fields.
