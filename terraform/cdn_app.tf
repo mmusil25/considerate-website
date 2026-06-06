@@ -176,6 +176,13 @@ resource "aws_cloudfront_cache_policy" "next_image" {
 # year max means CloudFront caches exactly as long as the origin says. Cookies
 # are excluded from the key so anonymous page views share one cached object
 # (pages here are public content; auth lives behind /admin and /api).
+#
+# CRITICAL: vary the cache key on Next's RSC headers. App-Router prefetches/
+# navigations request a page with `RSC: 1` and the origin returns the React
+# Flight payload (Content-Type: text/x-component) — the origin Vary's on these.
+# Without them in the key, CloudFront caches that RSC payload and serves it to a
+# normal browser document request, which then renders the raw Flight text
+# instead of HTML. Including them keeps HTML and RSC variants separate.
 resource "aws_cloudfront_cache_policy" "pages" {
   count       = local.app_cdn_enabled ? 1 : 0
   name        = "${var.app_name}-pages"
@@ -187,7 +194,12 @@ resource "aws_cloudfront_cache_policy" "pages" {
     enable_accept_encoding_brotli = true
     enable_accept_encoding_gzip   = true
     cookies_config { cookie_behavior = "none" }
-    headers_config { header_behavior = "none" }
+    headers_config {
+      header_behavior = "whitelist"
+      headers {
+        items = ["RSC", "Next-Router-Prefetch", "Next-Router-State-Tree", "Next-Router-Segment-Prefetch"]
+      }
+    }
     query_strings_config { query_string_behavior = "none" }
   }
 }
