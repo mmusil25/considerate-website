@@ -60,7 +60,18 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = manifestUrl // Safari / iOS native HLS
       } else if (Hls.isSupported()) {
-        hls = new Hls({ enableWorker: true })
+        hls = new Hls({
+          enableWorker: true,
+          // hls.js defaults to a 500 kbps bandwidth estimate, so playback opens
+          // on the lowest rung (~480p) and only climbs over several segments —
+          // a short clip ends before it ever ramps up. Start from a high
+          // estimate so fast connections jump near the top immediately; ABR
+          // still steps down for genuinely slow networks.
+          abrEwmaDefaultEstimate: 10_000_000,
+          // Don't downscale quality to the (possibly small) player box — the
+          // user explicitly wants full quality.
+          capLevelToPlayerSize: false,
+        })
         hls.loadSource(manifestUrl)
         hls.attachMedia(video)
       } else if (sourceUrl) {
