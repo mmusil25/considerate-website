@@ -9,6 +9,7 @@ import config from '@/payload.config'
 import { SiteHeader } from '../../components/SiteHeader'
 import { generateProjectJSONLD, serializeJsonLD, type SchemaType } from '@/lib/schema'
 import { cdnUrl } from '@/lib/cdn'
+import { normalizeLiveUrl } from '@/lib/url'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import type { Media, Video } from '../../../../../payload-types'
 
@@ -80,6 +81,8 @@ export default async function ProjectPage({ params }: Props) {
 
   const project = docs[0]
   if (!project) notFound()
+
+  const liveUrl = normalizeLiveUrl(project.liveUrl)
 
   const heroImage = typeof project.image === 'object' ? (project.image as Media) : null
   const video =
@@ -277,9 +280,9 @@ export default async function ProjectPage({ params }: Props) {
           )}
 
           {/* Live URL */}
-          {project.liveUrl && (
+          {liveUrl && (
             <a
-              href={project.liveUrl}
+              href={liveUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{

@@ -1,4 +1,5 @@
 import type { Project, Technology, SiteSetting, Media } from '../../payload-types'
+import { normalizeLiveUrl } from './url'
 
 export type SchemaType = 'CreativeWork' | 'WebApplication' | 'SoftwareSourceCode' | 'Service'
 
@@ -37,6 +38,7 @@ interface ProjectJSONLD {
     name: string
   }
   url?: string
+  sameAs?: string
   mentions?: Array<{ '@type': string; name: string; url?: string }>
   text?: string
   [key: string]: unknown
@@ -100,7 +102,12 @@ export function generateProjectJSONLD(
   if (project.description) jsonld.description = project.description
   if (imageUrl) jsonld.image = imageUrl
   if (project.publishedAt) jsonld.datePublished = new Date(project.publishedAt).toISOString().split('T')[0]
-  if (project.liveUrl) jsonld.url = project.liveUrl
+  // Canonical `url` is the project's own page. The user-entered "live site" link
+  // belongs in `sameAs`, and only when it's a real URL — otherwise a stray value
+  // (e.g. an email in the liveUrl field) would poison the structured data.
+  jsonld.url = `${baseUrl}/projects/${project.slug}`
+  const liveUrl = normalizeLiveUrl(project.liveUrl)
+  if (liveUrl) jsonld.sameAs = liveUrl
 
   // Author - prefer organization if available, fallback to person
   if (siteSettings) {
