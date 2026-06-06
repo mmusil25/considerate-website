@@ -120,7 +120,38 @@ aws logs tail /ecs/${APP_NAME} --follow
 
 Hit `http://<alb_dns_name>` and `http://<alb_dns_name>/admin`.
 
+## Deploying updates
 
+For every subsequent code change, use the deploy script instead of the manual
+build/push/migrate steps above:
+
+```sh
+scripts/deploy.sh
+```
+
+It reads all config from `terraform output` and runs, in order:
+
+1. Build + push the `runner` (`:latest`) and `migrator` (`:migrator`) images.
+2. **Run migrations as a one-off task and wait for it to exit 0.** If the
+   migration fails, the script aborts here and the app is **not** rolled out —
+   so a broken or pending migration stops the deploy loudly instead of silently
+   500-ing the admin after the new code is already live.
+3. Force a new ECS deployment and wait for the service to stabilize.
+
+`SKIP_BUILD=1 scripts/deploy.sh` reuses the current images and just re-runs
+migrate + rollout.
+
+> **Schema changes need a committed migration.** `scripts/deploy.sh` *applies*
+> committed migrations; it can't invent one you forgot. Whenever you add or
+> change a collection/field, generate and commit the migration in dev:
+>
+> ```sh
+> cd app && npx payload migrate:create <name>   # commit the generated file(s)
+> ```
+>
+> Skipping this is what breaks the admin: the new code expects columns the
+> database doesn't have (e.g. `payload_locked_documents_rels.<collection>_id`),
+> and every edit page 500s.
 
 ## Tearing Down
 

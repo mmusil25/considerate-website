@@ -1136,3 +1136,8 @@ output "public_subnet_2_id" {
 output "app_security_group_id" {
   value = aws_security_group.app.id
 }
+
+output "aws_region" {
+  description = "AWS region the stack is deployed in (consumed by scripts/deploy.sh)"
+  value       = var.aws_region
+}
