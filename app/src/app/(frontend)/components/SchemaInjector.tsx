@@ -14,7 +14,7 @@ export async function SchemaInjector() {
     const settings = settingsList[0] as any
     if (!settings) return null
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://considerate-systems.com'
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://consideratesystems.com'
 
     const orgJsonld = generateOrganizationJSONLD(settings, baseUrl)
     const personJsonld = generatePersonJSONLD(settings)

@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!project) return {}
 
   // Generate JSON-LD for schema
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://considerate-systems.com'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://consideratesystems.com'
   const schemaType = (project.structuredData?.schemaType as SchemaType) || 'CreativeWork'
   const jsonld = generateProjectJSONLD(project, baseUrl, schemaType)
 
@@ -105,7 +105,7 @@ export default async function ProjectPage({ params }: Props) {
     : null
 
   // Generate JSON-LD for this project
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://considerate-systems.com'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://consideratesystems.com'
   const schemaType = (project.structuredData?.schemaType as SchemaType) || 'CreativeWork'
   const jsonld = generateProjectJSONLD(project, baseUrl, schemaType)
 
