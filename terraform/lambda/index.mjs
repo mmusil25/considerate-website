@@ -105,7 +105,7 @@ async function handleJobStateChange(event) {
 
 // HLS ladder via MediaConvert Automated ABR: the ladder is generated FROM the
 // source — it never upscales, the top rung mirrors source quality, framerate
-// follows source, and MaxAbrBitrate caps the ceiling (~16 Mbps ≈ 2160p). Audio is
+// follows source, and MaxAbrBitrate caps the ceiling (~28 Mbps ≈ 2160p). Audio is
 // AAC (HLS/Safari-compatible). A frame-capture output writes the poster.
 // These encode params are plain data — tune here without touching infra.
 function buildJobSettings(input, hlsDestination, posterDestination) {
@@ -148,6 +148,12 @@ function buildJobSettings(input, hlsDestination, posterDestination) {
                 Codec: 'H_264',
                 H264Settings: {
                   RateControlMode: 'QVBR',
+                  // NOTE: QvbrSettings/QvbrQualityLevel is REJECTED under Automated ABR
+                  // ("Unexpected property qvbrSettings") — automated ABR controls the
+                  // QVBR quality target itself. To raise quality on "easy" content
+                  // (e.g. screen recordings that come out ~1.5 Mbps @ 4K) the only
+                  // levers are MinAbrBitrate (floor, above) or abandoning automated ABR
+                  // for a manual ladder. Do NOT add QvbrSettings here.
                   // Automated ABR REQUIRES an explicit HQ tuning level; without it
                   // CreateJob is rejected 400 ("qualityTuningLevel is a required
                   // property"). MULTI_PASS_HQ matches the preserve-source-quality policy.
