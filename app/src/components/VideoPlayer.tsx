@@ -80,9 +80,14 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
     if (playOriginal) {
       video.src = sourceUrl as string
     } else if (manifestUrl) {
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = manifestUrl // Safari / iOS native HLS (we can't drive levels)
-      } else if (Hls.isSupported()) {
+      // PREFER hls.js whenever it's supported (all desktop browsers — they have
+      // MSE). Chromium/Chrome report `canPlayType('...mpegurl')` truthy and will
+      // happily play the manifest NATIVELY, but native playback ignores every
+      // hls.js setting (bandwidth estimate, testBandwidth) AND fires no
+      // MANIFEST_PARSED, so it opens on the lowest rung and the quality menu
+      // never mounts. Only fall back to native HLS when hls.js is unavailable —
+      // i.e. iOS Safari, which has no MSE for video and must use native HLS.
+      if (Hls.isSupported()) {
         hls = new Hls({
           enableWorker: true,
           // These are short (~4s) single-segment clips. hls.js's default
@@ -112,6 +117,8 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
               .sort((a, b) => b.index - a.index),
           )
         })
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = manifestUrl // native HLS fallback (iOS Safari — no MSE; can't drive levels)
       } else if (sourceUrl) {
         video.src = sourceUrl // last-resort fallback
       }
