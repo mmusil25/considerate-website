@@ -1,5 +1,6 @@
 import type { JSXConvertersFunction } from '@payloadcms/richtext-lexical/react'
 import type { CSSProperties } from 'react'
+import Image from 'next/image'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { cdnUrl } from '@/lib/cdn'
 
@@ -10,6 +11,17 @@ const SIZE_TO_WIDTH: Record<string, string> = {
   medium: '50%',
   large: '75%',
   full: '100%',
+}
+
+// `sizes` hint per display size so the optimizer serves a variant matched to the
+// actual rendered slot instead of the original. The content column is capped at
+// 600px (see the project/page layouts); below 640px it goes ~full-bleed, so each
+// size is that fraction of the viewport on mobile and a fixed px cap on desktop.
+const SIZE_TO_SIZES: Record<string, string> = {
+  small: '(max-width: 640px) 25vw, 150px',
+  medium: '(max-width: 640px) 50vw, 300px',
+  large: '(max-width: 640px) 75vw, 450px',
+  full: '(max-width: 640px) 100vw, 600px',
 }
 
 // Custom JSX converters for Payload Lexical rich text. We override only the
@@ -87,7 +99,10 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
     const alignment = fields.alignment ?? 'center'
     const size = fields.size ?? 'medium'
     const width = SIZE_TO_WIDTH[size] ?? '50%'
+    const sizes = SIZE_TO_SIZES[size] ?? SIZE_TO_SIZES.medium
     const alt = fields.alt ?? (doc.alt as string | undefined) ?? ''
+    const intrinsicWidth = doc.width as number | undefined
+    const intrinsicHeight = doc.height as number | undefined
 
     // Figure layout depends on alignment. Float left/right lets body text wrap;
     // center/full are block-level.
@@ -110,16 +125,24 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
 
     return (
       <figure style={figureStyle}>
-        {/* Plain <img> mirrors Payload's default upload converter; the media doc
-            carries intrinsic width/height to avoid layout shift. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={url}
-          alt={alt}
-          width={(doc.width as number | undefined) ?? undefined}
-          height={(doc.height as number | undefined) ?? undefined}
-          style={{ width: '100%', height: 'auto', display: 'block' }}
-        />
+        {/* Body images run through next/image so they're served as AVIF/WebP and
+            resized to the rendered slot (via `sizes`) instead of the full-res
+            original. Below the fold, so default lazy-loading is correct — no
+            `priority`. next/image needs intrinsic dimensions; if the media doc
+            lacks them we fall back to a plain <img> to avoid a render error. */}
+        {intrinsicWidth && intrinsicHeight ? (
+          <Image
+            src={url}
+            alt={alt}
+            width={intrinsicWidth}
+            height={intrinsicHeight}
+            sizes={sizes}
+            style={{ width: '100%', height: 'auto', display: 'block' }}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={alt} style={{ width: '100%', height: 'auto', display: 'block' }} />
+        )}
         {fields.caption ? (
           <figcaption
             style={{

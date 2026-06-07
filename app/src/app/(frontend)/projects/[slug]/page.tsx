@@ -207,6 +207,13 @@ export default async function ProjectPage({ params }: Props) {
                 alt={project.title}
                 width={heroImage.width ?? 600}
                 height={heroImage.height ?? 400}
+                // Hero is the LCP element: load it eagerly + preload with high
+                // fetchpriority instead of the default lazy/late discovery.
+                priority
+                // The column is capped at 600px (see parent maxWidth), so tell the
+                // optimizer that — otherwise it assumes 100vw and serves a ~2048px
+                // variant into a 600px slot. 640px covers retina (2x of ~320).
+                sizes="(max-width: 640px) 100vw, 600px"
                 style={{ width: '100%', height: 'auto', display: 'block' }}
               />
             </div>
@@ -274,6 +281,9 @@ export default async function ProjectPage({ params }: Props) {
                     alt={`${project.title} gallery ${i + 1}`}
                     width={img.width ?? 300}
                     height={img.height ?? 200}
+                    // Grid cells are minmax(180px, 1fr) in a 600px column — at most
+                    // ~300px wide. Below 640px they go ~half-viewport.
+                    sizes="(max-width: 640px) 50vw, 300px"
                     style={{ width: '100%', height: 'auto', display: 'block' }}
                   />
                 ) : null,

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { getPayload } from 'payload'
 import { RichText } from '@payloadcms/richtext-lexical/react'
 import config from '@/payload.config'
@@ -87,12 +88,14 @@ export default async function AdvisorsDemoPage() {
                     }}
                   >
                     {headshot?.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={headshot.url}
                         alt={`${a.firstName} ${a.lastName}`}
                         width={88}
                         height={88}
+                        // Fixed 88px slot — serve an 88px (176px @2x) variant, not
+                        // the full-res source.
+                        sizes="88px"
                         style={{
                           width: '88px',
                           height: '88px',

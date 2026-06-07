@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '../../../components/SiteHeader'
@@ -89,20 +90,37 @@ export default async function LocationsDemoPage() {
                       scrollMarginTop: '20px',
                     }}
                   >
-                    {officeImage?.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={officeImage.url}
-                        alt={loc.name}
-                        style={{
-                          width: '100%',
-                          height: '200px',
-                          objectFit: 'cover',
-                          display: 'block',
-                          backgroundColor: '#e6f1fb',
-                        }}
-                      />
-                    )}
+                    {officeImage?.url &&
+                      (officeImage.width && officeImage.height ? (
+                        <Image
+                          src={officeImage.url}
+                          alt={loc.name}
+                          width={officeImage.width}
+                          height={officeImage.height}
+                          // Card spans the 640px column; full-bleed on mobile.
+                          sizes="(max-width: 640px) 100vw, 640px"
+                          style={{
+                            width: '100%',
+                            height: '200px',
+                            objectFit: 'cover',
+                            display: 'block',
+                            backgroundColor: '#e6f1fb',
+                          }}
+                        />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={officeImage.url}
+                          alt={loc.name}
+                          style={{
+                            width: '100%',
+                            height: '200px',
+                            objectFit: 'cover',
+                            display: 'block',
+                            backgroundColor: '#e6f1fb',
+                          }}
+                        />
+                      ))}
                     <div style={{ padding: '16px' }}>
                       <h2
                         style={{
@@ -175,10 +193,13 @@ export default async function LocationsDemoPage() {
                                 }}
                               >
                                 {emp.headshot && typeof emp.headshot === 'object' && emp.headshot.url ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
+                                  <Image
                                     src={emp.headshot.url}
                                     alt={`${emp.firstName} ${emp.lastName}`}
+                                    width={22}
+                                    height={22}
+                                    // 22px slot — a 44px @2x variant, not the source.
+                                    sizes="22px"
                                     style={{
                                       width: '22px',
                                       height: '22px',
