@@ -37,13 +37,27 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
     // Inline video clip (the `video` block from payload.config.ts). `node.fields.video`
     // is the populated Video doc when the body is queried at depth >= 2.
     video: ({ node }) => {
-      const fields = (node.fields ?? {}) as { video?: unknown; caption?: string }
+      const fields = (node.fields ?? {}) as {
+        video?: unknown
+        caption?: string
+        displaySize?: 'small' | 'medium' | 'large' | 'full'
+        displayAlignment?: 'left' | 'center' | 'right'
+      }
       const v =
         typeof fields.video === 'object' && fields.video
           ? (fields.video as Record<string, unknown>)
           : null
       // Unpopulated (still an id) or not finished transcoding -> nothing to play.
       if (!v || v.status !== 'ready') return null
+
+      // Display size/alignment are a property of THIS placement (the block), not
+      // the clip — so the same video can appear at different sizes on different
+      // pages. Fall back to the clip's own values for blocks saved before these
+      // per-placement controls existed.
+      const size = (fields.displaySize ??
+        v.displaySize) as 'small' | 'medium' | 'large' | 'full' | null
+      const align = (fields.displayAlignment ??
+        v.displayAlignment) as 'left' | 'center' | 'right' | null
 
       return (
         <figure style={{ margin: '16px 0' }}>
@@ -52,8 +66,8 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
             sourceUrl={cdnUrl(v.sourceKey as string | null)}
             sourceMimeType={v.sourceMimeType as string | null}
             poster={cdnUrl(v.posterKey as string | null)}
-            size={v.displaySize as 'small' | 'medium' | 'large' | 'full' | null}
-            align={v.displayAlignment as 'left' | 'center' | 'right' | null}
+            size={size}
+            align={align}
             alt={v.alt as string | null}
           />
           {fields.caption ? (

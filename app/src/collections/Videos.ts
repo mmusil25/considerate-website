@@ -49,7 +49,11 @@ const Videos: CollectionConfig = {
       required: true,
       admin: { description: ALT_TEXT_VIDEO_DESCRIPTION },
     },
-    // --- Presentation controls (how the clip displays on the page) ---
+    // --- Default presentation controls ---
+    // These are the clip's DEFAULT display size/alignment. Inline video blocks
+    // can override them per-placement (see InlineVideoBlock in payload.config.ts),
+    // so the same clip can appear at different sizes across pages. The main
+    // project video uses these defaults directly.
     {
       type: 'row',
       fields: [

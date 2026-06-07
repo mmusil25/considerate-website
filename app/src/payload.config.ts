@@ -228,6 +228,43 @@ export default buildConfig({
                 type: 'text',
                 admin: { description: 'Optional caption shown beneath the clip.' },
               },
+              // --- Per-placement presentation controls ---
+              // Display size/alignment live on the BLOCK (this placement), not on
+              // the Video doc, so the same clip can be embedded at different sizes
+              // across pages. Leave blank to fall back to the clip's own default.
+              {
+                type: 'row',
+                fields: [
+                  {
+                    name: 'displaySize',
+                    type: 'select',
+                    options: [
+                      { label: 'Small (240px)', value: 'small' },
+                      { label: 'Medium (400px)', value: 'medium' },
+                      { label: 'Large (640px)', value: 'large' },
+                      { label: 'Full width', value: 'full' },
+                    ],
+                    admin: {
+                      width: '50%',
+                      description:
+                        'Display width for THIS placement. Leave blank to use the clip default. Portrait clips look best at Small or Medium.',
+                    },
+                  },
+                  {
+                    name: 'displayAlignment',
+                    type: 'select',
+                    options: [
+                      { label: 'Center', value: 'center' },
+                      { label: 'Left', value: 'left' },
+                      { label: 'Right', value: 'right' },
+                    ],
+                    admin: {
+                      width: '50%',
+                      description: 'Horizontal placement within the column. Leave blank to use the clip default.',
+                    },
+                  },
+                ],
+              },
             ],
           },
           // Image Grid: a dynamic, responsive gallery of images dropped anywhere

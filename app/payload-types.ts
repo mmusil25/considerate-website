@@ -832,6 +832,14 @@ export interface InlineVideoBlock {
    * Optional caption shown beneath the clip.
    */
   caption?: string | null;
+  /**
+   * Display width for THIS placement. Leave blank to use the clip default. Portrait clips look best at Small or Medium.
+   */
+  displaySize?: ('small' | 'medium' | 'large' | 'full') | null;
+  /**
+   * Horizontal placement within the column. Leave blank to use the clip default.
+   */
+  displayAlignment?: ('center' | 'left' | 'right') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'video';
