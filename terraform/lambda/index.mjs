@@ -127,6 +127,15 @@ function buildJobSettings(input, hlsDestination, posterDestination) {
       {
         Name: 'HLS',
         AutomatedEncodingSettings: {
+          // NOTE (verified 2026-06-06): MinAbrBitrate does NOT raise real quality
+          // on "easy"/low-complexity content. QVBR still targets the same average
+          // (~1.5 Mbps for a 4K screen recording); a high floor just caps the PEAK
+          // and collapses the ladder to a single rung (killing adaptivity + the
+          // player's quality menu). Neither MinAbrBitrate nor QvbrQualityLevel
+          // (rejected, see H264Settings note) raises Automated-ABR quality — the
+          // only real lever is a MANUAL fixed-bitrate ladder. Left at 600k so the
+          // ladder stays multi-rung; the player opens on the top rung anyway
+          // (testBandwidth:false + high estimate in VideoPlayer.tsx).
           AbrSettings: { MaxAbrBitrate: 28000000, MaxRenditions: 6, MinAbrBitrate: 600000 },
         },
         OutputGroupSettings: {

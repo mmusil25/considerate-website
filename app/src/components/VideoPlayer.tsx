@@ -2,6 +2,7 @@
 
 import Hls from 'hls.js'
 import { useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 
 type Props = {
   /** HLS master manifest URL (adaptive — the default playback path). */
@@ -24,20 +25,38 @@ const SIZE_TO_MAXWIDTH: Record<string, string> = {
   full: '100%',
 }
 
+/** A selectable HLS rung. `index` maps to hls.js `levels[]`. */
+type Rung = { index: number; short: string; label: string }
+
+/** "auto" = adaptive, "original" = archived source, otherwise a level index. */
+type Choice = 'auto' | 'original' | number
+
+// The "p" number is the short edge — correct for both portrait and landscape.
+function shortRes(width: number, height: number): string {
+  const short = Math.min(width || 0, height || 0)
+  return short ? `${short}p` : 'SD'
+}
+
 /**
  * Adaptive video player honoring the project's quality policy:
- *  - Default to HLS for near-instant start; its top rung already equals source
- *    quality, so capable broadband clients converge to the ceiling quickly.
- *  - Safari/iOS play HLS natively; everyone else uses hls.js.
- *  - If the browser can decode the original directly, offer a "Max quality
- *    (original)" toggle that streams the archived source via CloudFront range
- *    requests — preserving exact source quality/codecs.
+ *  - Default to HLS, opened on the TOP rung. hls.js's default `testBandwidth`
+ *    probes by loading the lowest rung first — fatal for these single-segment
+ *    clips (there's no later segment to ramp on), so it's disabled and the high
+ *    bandwidth estimate makes the first fragment pick the ceiling.
+ *  - A YouTube-style quality menu (gear, top-right) lets viewers pin a specific
+ *    rung or the archived original — "shit quality is worse than no video".
+ *  - Safari/iOS play HLS natively (hls.js can't drive their levels, so they only
+ *    get Auto/Original); everyone else uses hls.js.
  *  - With no HLS (local dev), fall back to playing the source directly.
  */
 export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, size, align }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [mode, setMode] = useState<'hls' | 'original'>('hls')
+  const hlsRef = useRef<Hls | null>(null)
+  const [choice, setChoice] = useState<Choice>('auto')
+  const [rungs, setRungs] = useState<Rung[]>([])
+  const [usingHlsJs, setUsingHlsJs] = useState(false)
   const [canPlayOriginal, setCanPlayOriginal] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Feature-detect whether the browser can decode the original directly.
   useEffect(() => {
@@ -47,37 +66,51 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
     }
   }, [sourceUrl, sourceMimeType])
 
+  // (Re)attach the source whenever the original-vs-HLS choice flips. Pinning a
+  // specific rung does NOT re-run this — it's applied to the live hls instance —
+  // so switching quality never reloads the whole player.
+  const playOriginal = choice === 'original' && !!sourceUrl
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
     let hls: Hls | null = null
-
-    const playOriginal = mode === 'original' && sourceUrl
+    setUsingHlsJs(false)
+    setRungs([])
 
     if (playOriginal) {
       video.src = sourceUrl as string
     } else if (manifestUrl) {
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = manifestUrl // Safari / iOS native HLS
+        video.src = manifestUrl // Safari / iOS native HLS (we can't drive levels)
       } else if (Hls.isSupported()) {
         hls = new Hls({
           enableWorker: true,
-          // hls.js defaults to a 500 kbps bandwidth estimate, so playback opens
-          // on the lowest rung (~480p). These are short (~4s) clips — basically
-          // ONE segment per rung — so whatever level it opens on is the WHOLE
-          // video; there's no time to ramp. Assume a fat pipe so it opens on the
-          // top rung; hls.js emergency-downswitches mid-segment if a viewer's
-          // connection genuinely can't keep up.
+          // These are short (~4s) single-segment clips. hls.js's default
+          // `testBandwidth: true` loads the LOWEST rung first to probe bandwidth
+          // and ramps on the NEXT segment — but there is no next segment, so the
+          // whole clip plays at the floor. Disable it and seed a fat-pipe estimate
+          // so the first (only) fragment is chosen at the ceiling instead.
+          testBandwidth: false,
           abrEwmaDefaultEstimate: 40_000_000,
           // Don't downscale quality to the (possibly small) player box.
           capLevelToPlayerSize: false,
         })
+        hlsRef.current = hls
         hls.loadSource(manifestUrl)
         hls.attachMedia(video)
-        // Belt-and-suspenders: force the first fragment to the highest rung,
-        // independent of the bandwidth estimate, so short clips never open soft.
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          if (hls) hls.startLevel = hls.levels.length - 1
+          if (!hls) return
+          hls.startLevel = hls.levels.length - 1
+          setUsingHlsJs(true)
+          setRungs(
+            hls.levels
+              .map((lvl, index) => ({
+                index,
+                short: shortRes(lvl.width, lvl.height),
+                label: `${shortRes(lvl.width, lvl.height)}${lvl.bitrate ? ` · ${Math.round(lvl.bitrate / 1_000_000)} Mbps` : ''}`,
+              }))
+              .sort((a, b) => b.index - a.index),
+          )
         })
       } else if (sourceUrl) {
         video.src = sourceUrl // last-resort fallback
@@ -88,44 +121,123 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
 
     return () => {
       if (hls) hls.destroy()
+      hlsRef.current = null
     }
-  }, [manifestUrl, sourceUrl, mode])
+  }, [manifestUrl, sourceUrl, playOriginal])
+
+  // Apply a pinned rung (or re-enable ABR) to the live hls.js instance.
+  function selectChoice(next: Choice) {
+    setChoice(next)
+    setMenuOpen(false)
+    const hls = hlsRef.current
+    if (!hls || next === 'original') return
+    hls.currentLevel = next === 'auto' ? -1 : next // -1 re-enables adaptive
+  }
 
   if (!manifestUrl && !sourceUrl) return null
 
   const maxWidth = SIZE_TO_MAXWIDTH[size ?? 'full'] ?? '100%'
   const justify = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center'
 
+  const showOriginalOption = canPlayOriginal && !!manifestUrl && !!sourceUrl
+  const showQualityMenu = (usingHlsJs && rungs.length > 1) || showOriginalOption
+  const currentLabel =
+    choice === 'auto'
+      ? 'Auto'
+      : choice === 'original'
+        ? 'Original'
+        : (rungs.find((r) => r.index === choice)?.short ?? 'Auto')
+
+  const itemStyle = (active: boolean): CSSProperties => ({
+    display: 'block',
+    width: '100%',
+    textAlign: 'left',
+    padding: '6px 14px',
+    fontFamily: "'Work Sans', sans-serif",
+    fontSize: 12,
+    color: '#fff',
+    background: active ? 'rgba(255,255,255,0.18)' : 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  })
+
   return (
     <div style={{ marginBottom: 32, display: 'flex', justifyContent: justify }}>
-      <div style={{ width: '100%', maxWidth }}>
-      <video
-        ref={videoRef}
-        controls
-        playsInline
-        preload="metadata"
-        poster={poster ?? undefined}
-        style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 4, backgroundColor: '#000' }}
-      />
-      {canPlayOriginal && manifestUrl && sourceUrl && (
-        <button
-          type="button"
-          onClick={() => setMode((m) => (m === 'hls' ? 'original' : 'hls'))}
-          style={{
-            marginTop: 8,
-            fontFamily: "'Work Sans', sans-serif",
-            fontSize: 11,
-            color: '#185FA5',
-            background: 'none',
-            border: '1px solid #185FA5',
-            borderRadius: 2,
-            padding: '3px 10px',
-            cursor: 'pointer',
-          }}
-        >
-          {mode === 'hls' ? 'Max quality (original)' : 'Adaptive streaming (recommended)'}
-        </button>
-      )}
+      <div style={{ width: '100%', maxWidth, position: 'relative' }}>
+        <video
+          ref={videoRef}
+          controls
+          playsInline
+          preload="metadata"
+          poster={poster ?? undefined}
+          style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 4, backgroundColor: '#000' }}
+        />
+        {showQualityMenu && (
+          <div style={{ position: 'absolute', top: 8, right: 8 }}>
+            <button
+              type="button"
+              aria-label="Video quality"
+              onClick={() => setMenuOpen((o) => !o)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontFamily: "'Work Sans', sans-serif",
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#fff',
+                background: 'rgba(0,0,0,0.65)',
+                border: 'none',
+                borderRadius: 3,
+                padding: '5px 9px',
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
+            >
+              <span aria-hidden style={{ fontSize: 13 }}>⚙</span>
+              {currentLabel}
+            </button>
+            {menuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  right: 0,
+                  background: 'rgba(0,0,0,0.85)',
+                  borderRadius: 4,
+                  padding: '4px 0',
+                  minWidth: 140,
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                }}
+              >
+                <button type="button" style={itemStyle(choice === 'auto')} onClick={() => selectChoice('auto')}>
+                  Auto
+                </button>
+                {usingHlsJs &&
+                  rungs.map((r) => (
+                    <button
+                      key={r.index}
+                      type="button"
+                      style={itemStyle(choice === r.index)}
+                      onClick={() => selectChoice(r.index)}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                {showOriginalOption && (
+                  <button
+                    type="button"
+                    style={itemStyle(choice === 'original')}
+                    onClick={() => selectChoice('original')}
+                  >
+                    Original (max)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
