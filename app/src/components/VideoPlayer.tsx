@@ -16,6 +16,8 @@ type Props = {
   size?: 'small' | 'medium' | 'large' | 'full' | null
   /** Horizontal placement of the (capped-width) player within the column. */
   align?: 'left' | 'center' | 'right' | null
+  /** Accessible description of the clip — becomes the player's aria-label. */
+  alt?: string | null
 }
 
 const SIZE_TO_MAXWIDTH: Record<string, string> = {
@@ -49,7 +51,7 @@ function shortRes(width: number, height: number): string {
  *    get Auto/Original); everyone else uses hls.js.
  *  - With no HLS (local dev), fall back to playing the source directly.
  */
-export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, size, align }: Props) {
+export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, size, align, alt }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const [choice, setChoice] = useState<Choice>('auto')
@@ -178,6 +180,7 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
           playsInline
           preload="metadata"
           poster={poster ?? undefined}
+          aria-label={alt ?? undefined}
           style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 4, backgroundColor: '#000' }}
         />
         {showQualityMenu && (

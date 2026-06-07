@@ -2,7 +2,10 @@ import type { JSXConvertersFunction } from '@payloadcms/richtext-lexical/react'
 import type { CSSProperties } from 'react'
 import Image from 'next/image'
 import { VideoPlayer } from '@/components/VideoPlayer'
+import { ImageGrid, type ImageGridItem } from '@/components/ImageGrid'
+import { imageDecorStyle } from '@/lib/imageStyle'
 import { cdnUrl } from '@/lib/cdn'
+import { mediaUrl } from '@/lib/media'
 
 // Display width as a fraction of the content column, keyed by the `size` field
 // configured on the Upload feature in payload.config.ts.
@@ -51,6 +54,7 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
             poster={cdnUrl(v.posterKey as string | null)}
             size={v.displaySize as 'small' | 'medium' | 'large' | 'full' | null}
             align={v.displayAlignment as 'left' | 'center' | 'right' | null}
+            alt={v.alt as string | null}
           />
           {fields.caption ? (
             <figcaption
@@ -68,6 +72,54 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
         </figure>
       )
     },
+    // Image Grid block (the `imageGrid` block from payload.config.ts). Each row's
+    // `image` is the populated media doc when the body is queried at depth >= 2.
+    imageGrid: ({ node }) => {
+      const fields = (node.fields ?? {}) as {
+        images?: Array<{ image?: unknown; alt?: string; caption?: string }>
+        columns?: string
+        gap?: string
+        aspectRatio?: string
+        borderRadius?: string
+        shadow?: string
+      }
+
+      const items = (fields.images ?? [])
+        .map((row): ImageGridItem | null => {
+          const doc =
+            typeof row.image === 'object' && row.image
+              ? (row.image as Record<string, unknown>)
+              : null
+          // Versioned URL so a re-crop (same S3 key) busts the image caches.
+          const url = doc ? mediaUrl(doc as { url?: string | null; updatedAt?: string | null }) : null
+          if (!doc || !url) return null
+          // Skip non-image uploads (e.g. a PDF) — a grid is images only.
+          const mimeType = (doc.mimeType as string | undefined) ?? ''
+          if (!mimeType.startsWith('image')) return null
+
+          return {
+            url,
+            alt: row.alt ?? (doc.alt as string | undefined) ?? '',
+            caption: row.caption ?? null,
+            width: (doc.width as number | undefined) ?? null,
+            height: (doc.height as number | undefined) ?? null,
+          }
+        })
+        .filter(Boolean) as ImageGridItem[]
+
+      if (!items.length) return null
+
+      return (
+        <ImageGrid
+          items={items}
+          columns={fields.columns}
+          gap={fields.gap}
+          aspectRatio={fields.aspectRatio}
+          borderRadius={fields.borderRadius}
+          shadow={fields.shadow}
+        />
+      )
+    },
   },
   upload: ({ node }) => {
     // value is the populated media doc (depth >= 1); fields holds our extra
@@ -76,7 +128,8 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
       typeof node.value === 'object' ? (node.value as unknown as Record<string, unknown>) : null
     if (!doc) return null
 
-    const url = doc.url as string | undefined
+    // Versioned URL so a re-crop (same S3 key) busts the image caches.
+    const url = mediaUrl(doc as { url?: string | null; updatedAt?: string | null })
     if (!url) return null
 
     const mimeType = (doc.mimeType as string | undefined) ?? ''
@@ -85,6 +138,11 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
       size?: string
       alt?: string
       caption?: string
+      shadow?: string
+      borderRadius?: string
+      borderStyle?: string
+      borderWidth?: string
+      borderColor?: string
     }
 
     // Non-image uploads (e.g. a PDF) just render as a download link.
@@ -103,6 +161,10 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
     const alt = fields.alt ?? (doc.alt as string | undefined) ?? ''
     const intrinsicWidth = doc.width as number | undefined
     const intrinsicHeight = doc.height as number | undefined
+
+    // Editor-chosen shadow / corner radius / border, applied directly to the
+    // image element. Merged onto the base layout style below.
+    const decor = imageDecorStyle(fields)
 
     // Figure layout depends on alignment. Float left/right lets body text wrap;
     // center/full are block-level.
@@ -137,11 +199,15 @@ export const richTextConverters: JSXConvertersFunction = ({ defaultConverters })
             width={intrinsicWidth}
             height={intrinsicHeight}
             sizes={sizes}
-            style={{ width: '100%', height: 'auto', display: 'block' }}
+            style={{ width: '100%', height: 'auto', display: 'block', ...decor }}
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={alt} style={{ width: '100%', height: 'auto', display: 'block' }} />
+          <img
+            src={url}
+            alt={alt}
+            style={{ width: '100%', height: 'auto', display: 'block', ...decor }}
+          />
         )}
         {fields.caption ? (
           <figcaption

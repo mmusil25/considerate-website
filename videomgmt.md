@@ -121,10 +121,22 @@ down gracefully.
 ### Lambda — `terraform/lambda/index.mjs`
 One function, two triggers (routes by event shape), using the runtime's built-in
 `@aws-sdk` and global `fetch`:
-- **S3 event** → parse `<id>` from the key → `CreateJob` (Automated ABR HLS +
-  poster frame-capture), echoing `{videoId, hlsKey, posterKey}` in `UserMetadata`.
+- **S3 event** → parse `<id>` from the key → `HeadObject` the source to read the
+  `removeaudio` user-metadata flag → `CreateJob` (Automated ABR HLS + poster
+  frame-capture; **no audio track when `removeaudio=true`**), echoing
+  `{videoId, hlsKey, posterKey}` in `UserMetadata`.
 - **MediaConvert "Job State Change"** → on COMPLETE/ERROR, POST the app webhook with
   the secret so the Video doc flips to `ready`/`error`.
+
+### Remove audio (silent video)
+A `removeAudio` checkbox on the Video doc lets the editor drop the soundtrack —
+for workshop clips where the only audio is fan/background noise. Set it **before
+uploading**: `VideoUploader` sends the flag to `/api/videos/upload/create`, which
+stamps it as **S3 object metadata** (`x-amz-meta-removeaudio: true`) on the source.
+The Lambda HeadObjects the source and builds a job with no `AudioSelectors` /
+`AudioDescriptions`, so the HLS renditions are silent. To change it on an existing
+clip, re-upload the source. (No effect locally — local mode does no transcode and
+plays the source, which still has its audio.)
 
 ---
 

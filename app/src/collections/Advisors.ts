@@ -17,6 +17,16 @@ const Advisors: CollectionConfig = {
     delete: ({ req }) => !!req.user,
   },
   fields: [
+    // Quick jump from the editor to the live advisor directory (sidebar).
+    // UI-only, no DB column. See components/payload/ViewPageLink.tsx.
+    {
+      type: 'ui',
+      name: 'viewPageLink',
+      admin: {
+        position: 'sidebar',
+        components: { Field: '/components/payload/ViewPageLink#ViewPageLink' },
+      },
+    },
     { name: 'firstName', type: 'text', required: true },
     { name: 'lastName', type: 'text', required: true },
     { name: 'headshot', type: 'upload', relationTo: 'media' },

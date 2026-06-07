@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { mediaUrl } from '@/lib/media'
 import { SiteHeader } from '../../../components/SiteHeader'
 
 // ISR so CloudFront can edge-cache this page. Static route prerendered at build
@@ -93,8 +94,8 @@ export default async function LocationsDemoPage() {
                     {officeImage?.url &&
                       (officeImage.width && officeImage.height ? (
                         <Image
-                          src={officeImage.url}
-                          alt={loc.name}
+                          src={mediaUrl(officeImage)!}
+                          alt={officeImage.alt || loc.name}
                           width={officeImage.width}
                           height={officeImage.height}
                           // Card spans the 640px column; full-bleed on mobile.
@@ -110,8 +111,8 @@ export default async function LocationsDemoPage() {
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={officeImage.url}
-                          alt={loc.name}
+                          src={mediaUrl(officeImage)!}
+                          alt={officeImage.alt || loc.name}
                           style={{
                             width: '100%',
                             height: '200px',
@@ -194,8 +195,8 @@ export default async function LocationsDemoPage() {
                               >
                                 {emp.headshot && typeof emp.headshot === 'object' && emp.headshot.url ? (
                                   <Image
-                                    src={emp.headshot.url}
-                                    alt={`${emp.firstName} ${emp.lastName}`}
+                                    src={mediaUrl(emp.headshot)!}
+                                    alt={emp.headshot.alt || `${emp.firstName} ${emp.lastName}`}
                                     width={22}
                                     height={22}
                                     // 22px slot — a 44px @2x variant, not the source.

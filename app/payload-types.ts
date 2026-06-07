@@ -165,6 +165,10 @@ export interface User {
  */
 export interface Media {
   id: number;
+  /**
+   * Alt text is a short written description of this image. Screen readers read it aloud for people who can’t see the image, and browsers show it if the image fails to load. Describe what the image shows and why it matters here — e.g. “Founder presenting the new bakery brand on stage” — not the file name or the word “image”. (Required.)
+   */
+  alt: string;
   prefix?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -289,6 +293,10 @@ export interface Video {
    */
   title: string;
   /**
+   * Alt text is a short description of this video for people using screen readers and as a fallback when the clip can’t play. Describe what the clip shows and its purpose — e.g. “Time-lapse of the bakery storefront being built over three days”. One clear sentence is plenty. (Required.)
+   */
+  alt: string;
+  /**
    * Display width. Portrait (phone) clips look best at Small or Medium.
    */
   displaySize?: ('small' | 'medium' | 'large' | 'full') | null;
@@ -296,6 +304,10 @@ export interface Video {
    * Horizontal placement within the column.
    */
   displayAlignment?: ('center' | 'left' | 'right') | null;
+  /**
+   * Remove the audio track — produces a silent video. Useful for workshop clips where the only sound is computer fans or background noise. Audio is stripped during transcoding, so set this BEFORE uploading the source. To change it on an existing clip, re-upload the source.
+   */
+  removeAudio?: boolean | null;
   /**
    * Set automatically by the upload + transcode pipeline.
    */
@@ -611,6 +623,7 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
   prefix?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -666,8 +679,10 @@ export interface SiteSettingsSelect<T extends boolean = true> {
  */
 export interface VideosSelect<T extends boolean = true> {
   title?: T;
+  alt?: T;
   displaySize?: T;
   displayAlignment?: T;
+  removeAudio?: T;
   status?: T;
   sourceKey?: T;
   sourceMimeType?: T;
@@ -820,6 +835,50 @@ export interface InlineVideoBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'video';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ImageGridBlock".
+ */
+export interface ImageGridBlock {
+  /**
+   * Add images and drag to reorder. They flow into the grid left-to-right.
+   */
+  images: {
+    image: number | Media;
+    /**
+     * Optional — overrides the alt text just for this cell. Leave blank to use the alt text saved on the image itself (which is required).
+     */
+    alt?: string | null;
+    /**
+     * Optional caption shown beneath this image.
+     */
+    caption?: string | null;
+    id?: string | null;
+  }[];
+  /**
+   * How many columns the grid uses. "Auto-fit" packs as many as the width allows.
+   */
+  columns?: ('auto' | '2' | '3' | '4') | null;
+  /**
+   * Spacing between images.
+   */
+  gap?: ('none' | 'small' | 'medium' | 'large') | null;
+  /**
+   * Crop every cell to a uniform shape, or keep each image’s natural proportions.
+   */
+  aspectRatio?: ('auto' | 'square' | 'landscape' | 'wide' | 'portrait') | null;
+  /**
+   * Round the corners of every image in the grid.
+   */
+  borderRadius?: ('none' | 'small' | 'medium' | 'large' | 'full') | null;
+  /**
+   * Drop shadow depth behind every image in the grid.
+   */
+  shadow?: ('none' | 'small' | 'medium' | 'large') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'imageGrid';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

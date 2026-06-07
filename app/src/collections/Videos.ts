@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { purge } from '../lib/revalidate'
+import { ALT_TEXT_VIDEO_DESCRIPTION } from '../lib/altText'
 
 /**
  * Videos are NOT a Payload `upload` collection. The source files are 4K60 multi-GB
@@ -40,6 +41,14 @@ const Videos: CollectionConfig = {
       required: true,
       admin: { description: 'Internal label, e.g. "Bakery build timelapse"' },
     },
+    {
+      // Required for accessibility — used as the player's accessible name
+      // (aria-label) on the public page. See lib/altText.ts.
+      name: 'alt',
+      type: 'text',
+      required: true,
+      admin: { description: ALT_TEXT_VIDEO_DESCRIPTION },
+    },
     // --- Presentation controls (how the clip displays on the page) ---
     {
       type: 'row',
@@ -71,6 +80,15 @@ const Videos: CollectionConfig = {
           admin: { width: '50%', description: 'Horizontal placement within the column.' },
         },
       ],
+    },
+    {
+      name: 'removeAudio',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description:
+          'Remove the audio track — produces a silent video. Useful for workshop clips where the only sound is computer fans or background noise. Audio is stripped during transcoding, so set this BEFORE uploading the source. To change it on an existing clip, re-upload the source.',
+      },
     },
     {
       // The custom uploader drives the whole direct-to-S3 flow and writes the keys

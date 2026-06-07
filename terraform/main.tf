@@ -545,6 +545,17 @@ data "aws_iam_policy_document" "ecs_task" {
       resources = [aws_cloudfront_distribution.app[0].arn]
     }
   }
+
+  # Invalidate the media/assets distribution too. A re-crop overwrites an existing
+  # S3 object at its stable key, and this distribution's cache key ignores query
+  # strings, so the only way to refresh its edge copy is an explicit invalidation
+  # (Payload media afterChange hook -> purge({ assetsCdn: [...] })). Always present
+  # because the assets distribution always exists.
+  statement {
+    sid       = "CloudFrontInvalidateAssets"
+    actions   = ["cloudfront:CreateInvalidation"]
+    resources = [aws_cloudfront_distribution.assets.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "ecs_task" {
@@ -673,6 +684,10 @@ resource "aws_ecs_task_definition" "app" {
       # App distribution that fronts apex+www; the app issues CloudFront
       # invalidations against it on content change. Empty when the app CDN is off.
       { name = "APP_CLOUDFRONT_DISTRIBUTION_ID", value = try(aws_cloudfront_distribution.app[0].id, "") },
+      # Media/assets distribution that fronts the raw S3 objects (CLOUDFRONT_DOMAIN).
+      # The app invalidates specific object paths here when a media doc changes
+      # (e.g. a re-crop overwrites an existing key) — see lib/revalidate.ts.
+      { name = "ASSETS_CLOUDFRONT_DISTRIBUTION_ID", value = aws_cloudfront_distribution.assets.id },
       { name = "VIDEO_SOURCE_PREFIX", value = "videos/source/" },
       { name = "VIDEO_HLS_PREFIX", value = "videos/hls/" },
       # Shared secret the transcode Lambda uses to authenticate its completion

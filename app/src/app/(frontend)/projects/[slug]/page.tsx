@@ -9,6 +9,7 @@ import config from '@/payload.config'
 import { SiteHeader } from '../../components/SiteHeader'
 import { generateProjectJSONLD, serializeJsonLD, type SchemaType } from '@/lib/schema'
 import { cdnUrl } from '@/lib/cdn'
+import { mediaUrl } from '@/lib/media'
 import { normalizeLiveUrl } from '@/lib/url'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import type { Media, Video } from '../../../../../payload-types'
@@ -203,8 +204,8 @@ export default async function ProjectPage({ params }: Props) {
           {heroImage?.url && (
             <div style={{ marginBottom: '32px' }}>
               <Image
-                src={heroImage.url}
-                alt={project.title}
+                src={mediaUrl(heroImage)!}
+                alt={heroImage.alt || project.title}
                 width={heroImage.width ?? 600}
                 height={heroImage.height ?? 400}
                 // Hero is the LCP element: load it eagerly + preload with high
@@ -228,6 +229,7 @@ export default async function ProjectPage({ params }: Props) {
               poster={cdnUrl(video.posterKey)}
               size={video.displaySize}
               align={video.displayAlignment}
+              alt={video.alt}
             />
           )}
 
@@ -277,8 +279,8 @@ export default async function ProjectPage({ params }: Props) {
                 img.url ? (
                   <Image
                     key={img.id}
-                    src={img.url}
-                    alt={`${project.title} gallery ${i + 1}`}
+                    src={mediaUrl(img)!}
+                    alt={img.alt || `${project.title} gallery ${i + 1}`}
                     width={img.width ?? 300}
                     height={img.height ?? 200}
                     // Grid cells are minmax(180px, 1fr) in a 600px column — at most

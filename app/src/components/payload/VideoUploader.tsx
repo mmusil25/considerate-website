@@ -1,6 +1,6 @@
 'use client'
 
-import { useDocumentInfo } from '@payloadcms/ui'
+import { useDocumentInfo, useFormFields } from '@payloadcms/ui'
 import { useCallback, useRef, useState } from 'react'
 
 type Phase = 'idle' | 'uploading' | 'finalizing' | 'processing' | 'done' | 'error'
@@ -23,6 +23,10 @@ async function postJSON(url: string, body: unknown) {
 
 export const VideoUploader = () => {
   const { id } = useDocumentInfo()
+  // Read the "remove audio" checkbox live, so we send the editor's current intent
+  // with the upload even if they haven't saved the doc yet. The flag travels as
+  // S3 object metadata on the source → the transcode Lambda strips audio.
+  const removeAudio = useFormFields(([fields]) => Boolean(fields?.removeAudio?.value))
   const [phase, setPhase] = useState<Phase>('idle')
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -40,6 +44,7 @@ export const VideoUploader = () => {
           filename: file.name,
           contentType: file.type,
           fileSize: file.size,
+          removeAudio,
         })
 
         // 2. Slice into parts and PUT each directly to S3 via a presigned URL.
@@ -99,7 +104,7 @@ export const VideoUploader = () => {
         setPhase('error')
       }
     },
-    [id],
+    [id, removeAudio],
   )
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {

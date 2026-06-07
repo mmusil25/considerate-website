@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { getPayload } from 'payload'
 import { RichText } from '@payloadcms/richtext-lexical/react'
 import config from '@/payload.config'
+import { mediaUrl } from '@/lib/media'
 import { SiteHeader } from '../../../components/SiteHeader'
 
 // ISR so CloudFront can edge-cache this page. Static route prerendered at build
@@ -89,8 +90,8 @@ export default async function AdvisorsDemoPage() {
                   >
                     {headshot?.url && (
                       <Image
-                        src={headshot.url}
-                        alt={`${a.firstName} ${a.lastName}`}
+                        src={mediaUrl(headshot)!}
+                        alt={headshot.alt || `${a.firstName} ${a.lastName}`}
                         width={88}
                         height={88}
                         // Fixed 88px slot — serve an 88px (176px @2x) variant, not

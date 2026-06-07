@@ -18,6 +18,16 @@ const Locations: CollectionConfig = {
     delete: ({ req }) => !!req.user,
   },
   fields: [
+    // Quick jump from the editor to the live location directory (sidebar).
+    // UI-only, no DB column. See components/payload/ViewPageLink.tsx.
+    {
+      type: 'ui',
+      name: 'viewPageLink',
+      admin: {
+        position: 'sidebar',
+        components: { Field: '/components/payload/ViewPageLink#ViewPageLink' },
+      },
+    },
     {
       name: 'name',
       type: 'text',

@@ -13,6 +13,7 @@ import {
   DescribeEndpointsCommand,
   CreateJobCommand,
 } from '@aws-sdk/client-mediaconvert'
+import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3'
 
 const REGION = process.env.AWS_REGION
 const ROLE = process.env.MEDIACONVERT_ROLE_ARN
@@ -21,6 +22,8 @@ const BUCKET = process.env.ASSETS_BUCKET
 const HLS_PREFIX = process.env.HLS_PREFIX || 'videos/hls/'
 const WEBHOOK_URL = process.env.APP_WEBHOOK_URL
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
+
+const s3 = new S3Client({ region: REGION })
 
 // MediaConvert has an account-specific endpoint; discover once and cache.
 let cachedEndpoint = null
@@ -54,6 +57,18 @@ async function handleS3(event) {
     const hlsKey = `${HLS_PREFIX}${videoId}/index.m3u8`
     const posterKey = `${HLS_PREFIX}${videoId}/poster.0000000.jpg`
 
+    // The app stamps the editor's "remove audio" choice as object metadata on the
+    // source upload (see app/src/lib/s3-upload.ts). Read it back to decide whether
+    // the HLS job carries an audio track. Default to keeping audio if the head
+    // fails for any reason.
+    let removeAudio = false
+    try {
+      const head = await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }))
+      removeAudio = head.Metadata?.removeaudio === 'true'
+    } catch (e) {
+      console.log('HeadObject failed; keeping audio:', e?.message || e)
+    }
+
     const client = await mcClient()
     const res = await client.send(
       new CreateJobCommand({
@@ -66,10 +81,13 @@ async function handleS3(event) {
           `s3://${BUCKET}/${key}`,
           `s3://${BUCKET}/${HLS_PREFIX}${videoId}/index`,
           `s3://${BUCKET}/${HLS_PREFIX}${videoId}/poster`,
+          { removeAudio },
         ),
       }),
     )
-    console.log(`Started MediaConvert job ${res.Job?.Id} for video ${videoId}`)
+    console.log(
+      `Started MediaConvert job ${res.Job?.Id} for video ${videoId}${removeAudio ? ' (audio removed)' : ''}`,
+    )
   }
 }
 
@@ -108,7 +126,7 @@ async function handleJobStateChange(event) {
 // follows source, and MaxAbrBitrate caps the ceiling (~28 Mbps ≈ 2160p). Audio is
 // AAC (HLS/Safari-compatible). A frame-capture output writes the poster.
 // These encode params are plain data — tune here without touching infra.
-function buildJobSettings(input, hlsDestination, posterDestination) {
+function buildJobSettings(input, hlsDestination, posterDestination, { removeAudio = false } = {}) {
   return {
     TimecodeConfig: { Source: 'ZEROBASED' },
     Inputs: [
@@ -120,7 +138,9 @@ function buildJobSettings(input, hlsDestination, posterDestination) {
         // without this, MediaConvert bakes the sideways pixels and the clip
         // plays rotated 90°. AUTO applies the flag so portrait stays portrait.
         VideoSelector: { Rotate: 'AUTO' },
-        AudioSelectors: { 'Audio Selector 1': { DefaultSelection: 'DEFAULT' } },
+        // When removing audio, declare no audio selector at all — the output
+        // below carries no AudioDescriptions, so the HLS renditions are silent.
+        ...(removeAudio ? {} : { AudioSelectors: { 'Audio Selector 1': { DefaultSelection: 'DEFAULT' } } }),
       },
     ],
     OutputGroups: [
@@ -173,14 +193,20 @@ function buildJobSettings(input, hlsDestination, posterDestination) {
                 },
               },
             },
-            AudioDescriptions: [
-              {
-                CodecSettings: {
-                  Codec: 'AAC',
-                  AacSettings: { Bitrate: 192000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 },
-                },
-              },
-            ],
+            // Omit audio entirely when the editor asked for a silent video;
+            // otherwise AAC for HLS/Safari compatibility.
+            ...(removeAudio
+              ? {}
+              : {
+                  AudioDescriptions: [
+                    {
+                      CodecSettings: {
+                        Codec: 'AAC',
+                        AacSettings: { Bitrate: 192000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 },
+                      },
+                    },
+                  ],
+                }),
             OutputSettings: { HlsSettings: {} },
           },
         ],

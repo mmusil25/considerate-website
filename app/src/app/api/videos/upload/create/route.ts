@@ -19,24 +19,41 @@ export async function POST(req: Request) {
   const { user } = await payload.auth({ headers: req.headers })
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  let body: { videoId?: string | number; filename?: string; contentType?: string; fileSize?: number }
+  let body: {
+    videoId?: string | number
+    filename?: string
+    contentType?: string
+    fileSize?: number
+    removeAudio?: boolean
+  }
   try {
     body = await req.json()
   } catch {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { videoId, filename, contentType, fileSize } = body
+  const { videoId, filename, contentType, fileSize, removeAudio } = body
   if (!videoId) return Response.json({ error: 'videoId is required (save the video first)' }, { status: 400 })
   if (!filename) return Response.json({ error: 'filename is required' }, { status: 400 })
 
+  // Carry the "remove audio" choice to the transcode Lambda as S3 object metadata
+  // on the source — the Lambda HeadObjects it and builds a job with no audio
+  // track. Metadata is set at multipart-create time and persists onto the
+  // completed object.
   const { uploadId, key } = await createMultipart(
     String(videoId),
     filename,
     contentType || 'application/octet-stream',
+    removeAudio ? { removeaudio: 'true' } : undefined,
   )
 
-  await payload.update({ collection: 'videos', id: videoId, data: { status: 'uploading' } })
+  // Record the value actually applied to this upload on the doc, so the record
+  // matches what the pipeline did (the upload can precede a manual save).
+  await payload.update({
+    collection: 'videos',
+    id: videoId,
+    data: { status: 'uploading', removeAudio: !!removeAudio },
+  })
 
   // Keep parts under the 10k cap: ceil(size / 9000) leaves headroom.
   const partSize = fileSize ? Math.max(MIN_PART, Math.ceil(fileSize / 9000)) : MIN_PART

@@ -35,6 +35,16 @@ const Projects: CollectionConfig = {
     delete: ({ req }) => !!req.user,
   },
   fields: [
+    // Quick jump from the editor to the live project page (sidebar). UI-only,
+    // no DB column. See components/payload/ViewPageLink.tsx.
+    {
+      type: 'ui',
+      name: 'viewPageLink',
+      admin: {
+        position: 'sidebar',
+        components: { Field: '/components/payload/ViewPageLink#ViewPageLink' },
+      },
+    },
     { name: 'title',       type: 'text',     required: true },
     { name: 'slug',        type: 'text',     required: true, unique: true,
       admin: { description: 'URL-safe identifier, e.g. "bakery-rebrand"' } },

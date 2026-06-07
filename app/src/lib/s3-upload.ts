@@ -57,6 +57,11 @@ export async function createMultipart(
   videoId: string,
   filename: string,
   contentType: string,
+  // S3 user metadata to stamp on the source object. Set once here (at multipart
+  // init) and it persists onto the finished object, where the transcode Lambda
+  // reads it via HeadObject — e.g. `{ removeaudio: 'true' }` to strip audio.
+  // Keys must be lowercase (S3 lowercases them; the Lambda looks them up as-is).
+  metadata?: Record<string, string>,
 ): Promise<{ uploadId: string; key: string }> {
   const key = `${VIDEO_SOURCE_PREFIX}${videoId}/${sanitizeFilename(filename)}`
   const res = await getS3Client().send(
@@ -64,6 +69,7 @@ export async function createMultipart(
       Bucket: getBucket(),
       Key: key,
       ContentType: contentType || 'application/octet-stream',
+      ...(metadata && Object.keys(metadata).length > 0 ? { Metadata: metadata } : {}),
     }),
   )
   if (!res.UploadId) throw new Error('S3 did not return an UploadId')
