@@ -93,6 +93,17 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      // Live sitemap inspector at /admin/sitemap (see SitemapView for the
+      // auth guard — custom views are public unless they check req.user).
+      views: {
+        sitemap: {
+          Component: '/components/payload/SitemapView#SitemapView',
+          path: '/sitemap',
+        },
+      },
+      afterNavLinks: ['/components/payload/SitemapNavLink#SitemapNavLink'],
+    },
   },
   // Extend the editor's default Upload feature so editors can control how an
   // image embedded in rich-text body renders: size + alignment/text-wrap + alt.

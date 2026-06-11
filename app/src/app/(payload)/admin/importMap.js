@@ -28,7 +28,9 @@ import { SchemaTypeSelector as SchemaTypeSelector_0a69bef06e95485e88d680ecd3e92d
 import { SchemaFieldMapper as SchemaFieldMapper_a3aab16ff76772cfd168eedcf78271d7 } from '../../../components/payload/SchemaFieldMapper'
 import { TechStackSelector as TechStackSelector_8d3911c81f49f91abc81a96e37da068f } from '../../../components/payload/TechStackSelector'
 import { JSONLDPreview as JSONLDPreview_a05f71c3cbf6820a189bd8ed41c450c3 } from '../../../components/payload/JSONLDPreview'
+import { SitemapNavLink as SitemapNavLink_098c60e2b5a0e41580629b132a0f03c9 } from '../../../components/payload/SitemapNavLink'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
+import { SitemapView as SitemapView_6ca86320380b2996dc93370bf38ec02b } from '../../../components/payload/SitemapView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -63,6 +65,8 @@ export const importMap = {
   "/components/payload/SchemaFieldMapper#SchemaFieldMapper": SchemaFieldMapper_a3aab16ff76772cfd168eedcf78271d7,
   "/components/payload/TechStackSelector#TechStackSelector": TechStackSelector_8d3911c81f49f91abc81a96e37da068f,
   "/components/payload/JSONLDPreview#JSONLDPreview": JSONLDPreview_a05f71c3cbf6820a189bd8ed41c450c3,
+  "/components/payload/SitemapNavLink#SitemapNavLink": SitemapNavLink_098c60e2b5a0e41580629b132a0f03c9,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24,
+  "/components/payload/SitemapView#SitemapView": SitemapView_6ca86320380b2996dc93370bf38ec02b,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

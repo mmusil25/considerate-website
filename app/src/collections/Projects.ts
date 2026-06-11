@@ -10,16 +10,16 @@ const Projects: CollectionConfig = {
     afterChange: [
       ({ doc }) =>
         purge({
-          paths: [`/projects/${doc.slug}`, '/projects'],
-          cdn: [`/projects/${doc.slug}`, '/projects'],
+          paths: [`/projects/${doc.slug}`, '/projects', '/sitemap.xml'],
+          cdn: [`/projects/${doc.slug}`, '/projects', '/sitemap.xml'],
         }),
     ],
     afterDelete: [
       ({ doc }) =>
         purge({
-          paths: ['/projects'],
+          paths: ['/projects', '/sitemap.xml'],
           routes: ['/projects/[slug]'],
-          cdn: [`/projects/${doc.slug}`, '/projects'],
+          cdn: [`/projects/${doc.slug}`, '/projects', '/sitemap.xml'],
         }),
     ],
   },

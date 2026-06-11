@@ -1,4 +1,5 @@
 import { revalidatePath } from 'next/cache'
+import type { Payload } from 'payload'
 
 /**
  * Purge a set of routes from BOTH caches after a content change.
@@ -73,4 +74,50 @@ export async function purge({
     invalidate(process.env.APP_CLOUDFRONT_DISTRIBUTION_ID, cdn),
     invalidate(process.env.ASSETS_CLOUDFRONT_DISTRIBUTION_ID, assetsCdn),
   ])
+}
+
+/**
+ * Purge EVERY page from both caches: `revalidatePath('/', 'layout')` drops the
+ * whole Next ISR cache (every route shares the root layout), and `/*` clears the
+ * app CloudFront distribution. The assets distribution is left alone — media
+ * objects are content-addressed except re-crops, which the media hook already
+ * invalidates precisely.
+ */
+export async function purgeEverything(): Promise<void> {
+  try {
+    revalidatePath('/', 'layout')
+  } catch (err) {
+    console.error('[revalidate] site-wide revalidatePath failed', err)
+  }
+  await invalidate(process.env.APP_CLOUDFRONT_DISTRIBUTION_ID, ['/*'])
+}
+
+/** On-save freshness policies a site owner can pick per collection in the admin
+ * "Settings → Cache" screen (the `cache-control` global). */
+export type OnSavePolicy = 'cdn' | 'origin' | 'none'
+
+/**
+ * Like `purge()`, but gated by the editor-configurable policy for `collection`
+ * stored in the `cache-control` global:
+ *   'cdn'    -> full purge (origin + CDN), changes visible everywhere immediately
+ *   'origin' -> revalidate Next's cache only; the CDN edge catches up on its own
+ *   'none'   -> rely entirely on timed ISR/CDN expiry
+ * Falls back to the full purge if the global can't be read (e.g. mid-migration),
+ * matching the previous hardwired behavior.
+ */
+export async function purgeByPolicy(
+  payload: Payload,
+  collection: 'advisors' | 'locations' | 'projects' | 'videos',
+  args: PurgeArgs,
+): Promise<void> {
+  let policy: OnSavePolicy = 'cdn'
+  try {
+    const settings = await payload.findGlobal({ slug: 'cache-control', depth: 0 })
+    policy = (settings?.onSave?.[collection] as OnSavePolicy) || 'cdn'
+  } catch (err) {
+    console.error('[revalidate] could not read cache-control settings, doing full purge', err)
+  }
+  if (policy === 'none') return
+  if (policy === 'origin') return purge({ paths: args.paths, routes: args.routes })
+  return purge(args)
 }
