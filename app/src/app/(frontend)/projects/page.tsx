@@ -15,7 +15,9 @@ export default async function ProjectsPage() {
   let projects: Project[] = []
   try {
     const payload = await getPayload({ config })
-    const res = await payload.find({ collection: 'projects', sort: '-publishedAt', depth: 1 })
+    // pagination: false — Payload's find defaults to limit 10, which silently
+    // drops the oldest projects once the portfolio grows past ten.
+    const res = await payload.find({ collection: 'projects', sort: '-publishedAt', depth: 1, pagination: false })
     projects = res.docs
   } catch {
     projects = []
