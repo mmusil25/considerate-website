@@ -12,12 +12,25 @@ export function SiteHeader() {
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (!e.ctrlKey || !e.altKey) return
-      const item = navItems.find((n) => n.key === e.key.toLowerCase())
+      if (!e.ctrlKey || !e.altKey || e.metaKey) return
+      // Don't hijack AltGr (Ctrl+Alt) character input in editable fields
+      const target = e.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      )
+        return
+      // Match the physical key (e.code) instead of e.key: with Alt held the
+      // produced character is often not the plain letter (Option+S = 'ß' on
+      // macOS, AltGr combos on many layouts), so e.key never matches.
+      const item = navItems.find(
+        (n) => e.code === `Key${n.key.toUpperCase()}` || n.key === e.key.toLowerCase(),
+      )
       if (!item) return
       e.preventDefault()
       if (item.external) {
-        window.open(item.href, '_blank', 'noopener,noreferrer')
+        const win = window.open(item.href, '_blank', 'noopener,noreferrer')
+        if (!win) window.location.assign(item.href)
       } else {
         router.push(item.href)
       }

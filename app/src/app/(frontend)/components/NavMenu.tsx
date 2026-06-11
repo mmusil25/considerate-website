@@ -18,6 +18,22 @@ export const navItems = [
     external: false,
   },
   {
+    label: 'Services',
+    href: '/services',
+    shortcut: ['Ctrl', 'Alt', 'V'],
+    key: 'v',
+    active: false,
+    external: false,
+  },
+  {
+    label: 'About Mark',
+    href: '/about',
+    shortcut: ['Ctrl', 'Alt', 'A'],
+    key: 'a',
+    active: false,
+    external: false,
+  },
+  {
     label: 'Contact form',
     href: '/contact',
     shortcut: ['Ctrl', 'Alt', 'C'],
