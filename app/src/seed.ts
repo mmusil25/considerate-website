@@ -92,6 +92,12 @@ type SeedProject = {
   publishedAt: string
   outcomes?: string
   schemaType?: 'CreativeWork' | 'WebApplication' | 'SoftwareSourceCode' | 'Service'
+  /**
+   * Never update an existing doc with this slug — only create when missing.
+   * For projects that live on prod with rich media (images/videos) the seed
+   * can't reproduce; the seeded text body is just a fallback for fresh DBs.
+   */
+  createOnly?: boolean
 }
 
 const PROJECTS: SeedProject[] = [
@@ -240,6 +246,25 @@ const PROJECTS: SeedProject[] = [
     schemaType: 'CreativeWork',
   },
   {
+    // Lives on prod with full image/video galleries entered via admin — the
+    // createOnly flag guarantees the seed never touches that version. This
+    // text-only body only materializes on a fresh (e.g. local dev) database.
+    slug: 'jetblack-cosplay',
+    title: 'Jetblack Cowboy Bebop Outfit',
+    client: 'Personal Project',
+    description: 'Handmade outfit crafted using custom EVA foam and 3D printed armor pieces',
+    bodyParagraphs: [
+      'It has been a lifelong goal of mine to create custom cosplay outfits. After starting with no-craft outfits like Aang (a jumpsuit and face paint), in February of 2026 I decided to get serious about building real outfits. I chose Jet Black from Cowboy Bebop over Kratos: an approachable character whose outfit still teaches EVA foam-smithing and 3D printing, without the convention-rule headaches of crafted weapons.',
+      'The outfit breaks into three categories: clothing for the base outfit (maroon compression shirt, leather vest, blue pants), EVA foam-smithing for the leg pieces, and 3D printing for the robot arm. Foam legs over plastic (weight and fit), printed PLA+ arm over foam (rigidity).',
+      'For the foam work I started from a pre-made SKS Props template and tutorial rather than the higher-skill duct-tape template method. The biggest hurdle was blade choice — a box cutter left shaggy cuts; an OLFA 25mm utility knife sharpened between cuts on a ceramic sharpener fixed it. The legs went from raw foam through plastidip to the final color coat.',
+      'The robot arm came from a premade .stl purchased on Etsy, printed on an Elegoo Neptune 4 Plus. Filament that had sat exposed since fall 2024 had absorbed enough water to steam-destroy the first print head; a filament drying box (relative humidity below 10%) plus careful leveling and a stable surface solved it. The two printed pieces were then assembled and painted.',
+    ],
+    technologies: [],
+    publishedAt: '2026-06-01T00:00:00.000Z',
+    schemaType: 'CreativeWork',
+    createOnly: true,
+  },
+  {
     slug: 'wafer-defect-detection',
     title: 'DNN Wafer-Defect Detection at Intel',
     client: 'Intel Corporation',
@@ -304,6 +329,10 @@ async function run() {
       limit: 1,
     })
     if (existing.docs[0]) {
+      if (proj.createOnly) {
+        payload.logger.info(`project exists, left untouched (createOnly): ${proj.slug}`)
+        continue
+      }
       await payload.update({ collection: 'projects', id: existing.docs[0].id, data: data as any })
       payload.logger.info(`project updated: ${proj.slug}`)
     } else {
