@@ -85,3 +85,18 @@ Videos intermittently failed on www.consideratesystems.com:
 - Turnkey-template refactor backlog (from this session's audit): de-hardcode
   branding into site-settings, Pages-vs-Builder.io decision, CMS nav, drafts/
   preview, blog collection, redirects, roles.
+
+## 5. Favicon (commit 3199255, deployed)
+Checkmark extracted from logo.svg into `src/app/icon.svg` (scaled 1.6x,
+stroke 5.5) + multi-size `favicon.ico`. Both auto-served by Next file
+conventions; verified live in head links.
+
+## Live verification (post-deploy, Jun 11 ~13:50 UTC)
+- Contact form on prod: submit → ?sent=1 banner, row saved, SES sent counter
+  incremented (email to mark@consideratesystems.com). Honeypot/rate-limit in place.
+- robots.txt, /icon.svg, /favicon.ico: 200. Styled 404 serves with status 404;
+  /admin not shadowed by the [...notFound] catch-all.
+- sitemap.xml live but build-time version (static routes only) until the first
+  hourly ISR revalidate runs server-side with DB access — project URLs join then.
+- A test submission "Deploy Verification / Live contact form test" + an earlier
+  CLI test email are in WorkMail + the admin's Contact Submissions — safe to delete.
