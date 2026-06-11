@@ -1,6 +1,9 @@
 'use client'
 
-import Hls from 'hls.js'
+// hls.js is ~157 KB gzipped — bigger than the rest of the page's JS combined —
+// so it's loaded with a dynamic import() inside the effect rather than
+// statically, keeping it off the initial-load critical path.
+import type HlsType from 'hls.js'
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 
@@ -25,6 +28,30 @@ const SIZE_TO_MAXWIDTH: Record<string, string> = {
   medium: '400px',
   large: '640px',
   full: '100%',
+}
+
+// Poster frames come out of MediaConvert at source resolution (often 4K —
+// 500+ KB of JPEG for a ≤640px player). Route CloudFront posters through the
+// Next image optimizer so the browser gets a player-sized AVIF/WebP instead.
+// Widths are ~2x the display cap (retina) and must be values the optimizer
+// allows (default deviceSizes). Non-CloudFront URLs (local MinIO dev) aren't
+// in remotePatterns and would 400, so they pass through untouched.
+const SIZE_TO_POSTER_WIDTH: Record<string, number> = {
+  small: 640,
+  medium: 828,
+  large: 1200,
+  full: 1920,
+}
+
+function optimizedPoster(poster: string | null | undefined, size: Props['size']): string | undefined {
+  if (!poster) return undefined
+  try {
+    if (!new URL(poster).hostname.endsWith('.cloudfront.net')) return poster
+  } catch {
+    return poster
+  }
+  const w = SIZE_TO_POSTER_WIDTH[size ?? 'full'] ?? 1920
+  return `/_next/image?url=${encodeURIComponent(poster)}&w=${w}&q=70`
 }
 
 /** A selectable HLS rung. `index` maps to hls.js `levels[]`. */
@@ -53,7 +80,7 @@ function shortRes(width: number, height: number): string {
  */
 export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, size, align, alt }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const hlsRef = useRef<Hls | null>(null)
+  const hlsRef = useRef<HlsType | null>(null)
   const [choice, setChoice] = useState<Choice>('auto')
   const [rungs, setRungs] = useState<Rung[]>([])
   const [usingHlsJs, setUsingHlsJs] = useState(false)
@@ -75,60 +102,83 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    let hls: Hls | null = null
+    let hls: HlsType | null = null
+    let cancelled = false
+    let loadStarted = false
     setUsingHlsJs(false)
     setRungs([])
+
+    // Fragment loading is deferred (autoStartLoad: false) so a page full of
+    // players doesn't buffer megabytes of top-rung video nobody asked to play.
+    // The first `play` is the signal of intent — attached synchronously so a
+    // click that lands while hls.js is still import()ing isn't lost.
+    const onPlay = () => {
+      if (!loadStarted && hlsRef.current) {
+        loadStarted = true
+        hlsRef.current.startLoad()
+      }
+    }
+    video.addEventListener('play', onPlay)
 
     if (playOriginal) {
       video.src = sourceUrl as string
     } else if (manifestUrl) {
-      // PREFER hls.js whenever it's supported (all desktop browsers — they have
-      // MSE). Chromium/Chrome report `canPlayType('...mpegurl')` truthy and will
-      // happily play the manifest NATIVELY, but native playback ignores every
-      // hls.js setting (bandwidth estimate, testBandwidth) AND fires no
-      // MANIFEST_PARSED, so it opens on the lowest rung and the quality menu
-      // never mounts. Only fall back to native HLS when hls.js is unavailable —
-      // i.e. iOS Safari, which has no MSE for video and must use native HLS.
-      if (Hls.isSupported()) {
-        hls = new Hls({
-          enableWorker: true,
-          // These are short (~4s) single-segment clips. hls.js's default
-          // `testBandwidth: true` loads the LOWEST rung first to probe bandwidth
-          // and ramps on the NEXT segment — but there is no next segment, so the
-          // whole clip plays at the floor. Disable it and seed a fat-pipe estimate
-          // so the first (only) fragment is chosen at the ceiling instead.
-          testBandwidth: false,
-          abrEwmaDefaultEstimate: 40_000_000,
-          // Don't downscale quality to the (possibly small) player box.
-          capLevelToPlayerSize: false,
-        })
-        hlsRef.current = hls
-        hls.loadSource(manifestUrl)
-        hls.attachMedia(video)
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          if (!hls) return
-          hls.startLevel = hls.levels.length - 1
-          setUsingHlsJs(true)
-          setRungs(
-            hls.levels
-              .map((lvl, index) => ({
-                index,
-                short: shortRes(lvl.width, lvl.height),
-                label: `${shortRes(lvl.width, lvl.height)}${lvl.bitrate ? ` · ${Math.round(lvl.bitrate / 1_000_000)} Mbps` : ''}`,
-              }))
-              .sort((a, b) => b.index - a.index),
-          )
-        })
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = manifestUrl // native HLS fallback (iOS Safari — no MSE; can't drive levels)
-      } else if (sourceUrl) {
-        video.src = sourceUrl // last-resort fallback
-      }
+      ;(async () => {
+        const { default: Hls } = await import('hls.js')
+        if (cancelled) return
+        // PREFER hls.js whenever it's supported (all desktop browsers — they have
+        // MSE). Chromium/Chrome report `canPlayType('...mpegurl')` truthy and will
+        // happily play the manifest NATIVELY, but native playback ignores every
+        // hls.js setting (bandwidth estimate, testBandwidth) AND fires no
+        // MANIFEST_PARSED, so it opens on the lowest rung and the quality menu
+        // never mounts. Only fall back to native HLS when hls.js is unavailable —
+        // i.e. iOS Safari, which has no MSE for video and must use native HLS.
+        if (Hls.isSupported()) {
+          hls = new Hls({
+            enableWorker: true,
+            // These are short (~4s) single-segment clips. hls.js's default
+            // `testBandwidth: true` loads the LOWEST rung first to probe bandwidth
+            // and ramps on the NEXT segment — but there is no next segment, so the
+            // whole clip plays at the floor. Disable it and seed a fat-pipe estimate
+            // so the first (only) fragment is chosen at the ceiling instead.
+            testBandwidth: false,
+            abrEwmaDefaultEstimate: 40_000_000,
+            // Don't downscale quality to the (possibly small) player box.
+            capLevelToPlayerSize: false,
+            // Only the manifest loads up front (keeps the quality menu working);
+            // fragments wait for startLoad() in the play handler above.
+            autoStartLoad: false,
+          })
+          hlsRef.current = hls
+          hls.loadSource(manifestUrl)
+          hls.attachMedia(video)
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            if (!hls) return
+            hls.startLevel = hls.levels.length - 1
+            setUsingHlsJs(true)
+            setRungs(
+              hls.levels
+                .map((lvl, index) => ({
+                  index,
+                  short: shortRes(lvl.width, lvl.height),
+                  label: `${shortRes(lvl.width, lvl.height)}${lvl.bitrate ? ` · ${Math.round(lvl.bitrate / 1_000_000)} Mbps` : ''}`,
+                }))
+                .sort((a, b) => b.index - a.index),
+            )
+          })
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = manifestUrl // native HLS fallback (iOS Safari — no MSE; can't drive levels)
+        } else if (sourceUrl) {
+          video.src = sourceUrl // last-resort fallback
+        }
+      })()
     } else if (sourceUrl) {
       video.src = sourceUrl // local-dev / no-HLS path
     }
 
     return () => {
+      cancelled = true
+      video.removeEventListener('play', onPlay)
       if (hls) hls.destroy()
       hlsRef.current = null
     }
@@ -178,8 +228,8 @@ export function VideoPlayer({ manifestUrl, sourceUrl, sourceMimeType, poster, si
           ref={videoRef}
           controls
           playsInline
-          preload="metadata"
-          poster={poster ?? undefined}
+          preload="none"
+          poster={optimizedPoster(poster, size)}
           aria-label={alt ?? undefined}
           style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 4, backgroundColor: '#000' }}
         />
