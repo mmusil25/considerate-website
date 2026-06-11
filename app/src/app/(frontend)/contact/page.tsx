@@ -1,4 +1,5 @@
 import { SiteHeader } from '../components/SiteHeader'
+import { submitContact } from './actions'
 
 const inputStyle: React.CSSProperties = {
   display: 'block',
@@ -25,7 +26,37 @@ const labelStyle: React.CSSProperties = {
   marginBottom: '5px',
 }
 
-export default function ContactPage() {
+const bannerBase: React.CSSProperties = {
+  fontFamily: "'Source Sans 3', 'Source Sans Pro', sans-serif",
+  fontSize: '14px',
+  lineHeight: 1.5,
+  padding: '10px 14px',
+  borderRadius: '2px',
+  marginBottom: '24px',
+}
+
+const BANNERS: Record<string, { style: React.CSSProperties; text: string }> = {
+  sent: {
+    style: { ...bannerBase, backgroundColor: '#E7F4E4', color: '#1E4620', border: '1px solid #B7DFB9' },
+    text: "Thanks — your message is on its way. I'll get back to you within one business day.",
+  },
+  invalid: {
+    style: { ...bannerBase, backgroundColor: '#FDECEA', color: '#611A15', border: '1px solid #F5C6CB' },
+    text: 'Please fill in every field (with a valid email address) and try again.',
+  },
+  rate: {
+    style: { ...bannerBase, backgroundColor: '#FDECEA', color: '#611A15', border: '1px solid #F5C6CB' },
+    text: 'Too many messages from this connection — please wait a bit and try again, or email me directly.',
+  },
+}
+
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sent?: string; error?: string }>
+}) {
+  const params = await searchParams
+  const banner = params.sent ? BANNERS.sent : params.error ? BANNERS[params.error] : undefined
   return (
     <main style={{ backgroundColor: '#E6F1FB', minHeight: '100vh' }}>
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '9px 25px 60px' }}>
@@ -64,15 +95,21 @@ export default function ContactPage() {
             </a>
           </p>
 
-          <form style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {banner && (
+            <div role="status" style={banner.style}>
+              {banner.text}
+            </div>
+          )}
+
+          <form action={submitContact} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label htmlFor="name" style={labelStyle}>Name</label>
-                <input id="name" name="name" type="text" placeholder="Your name" style={inputStyle} />
+                <input id="name" name="name" type="text" required maxLength={200} placeholder="Your name" style={inputStyle} />
               </div>
               <div>
                 <label htmlFor="email" style={labelStyle}>Email</label>
-                <input id="email" name="email" type="email" placeholder="you@example.com" style={inputStyle} />
+                <input id="email" name="email" type="email" required maxLength={320} placeholder="you@example.com" style={inputStyle} />
               </div>
             </div>
 
@@ -82,6 +119,8 @@ export default function ContactPage() {
                 id="subject"
                 name="subject"
                 type="text"
+                required
+                maxLength={300}
                 placeholder="What are you working on?"
                 style={inputStyle}
               />
@@ -93,9 +132,17 @@ export default function ContactPage() {
                 id="message"
                 name="message"
                 rows={6}
+                required
+                maxLength={5000}
                 placeholder="Tell me about your project — scope, timeline, and any constraints that matter."
                 style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.55 }}
               />
+            </div>
+
+            {/* Honeypot — hidden from humans, irresistible to bots. */}
+            <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', height: 0, overflow: 'hidden' }}>
+              <label htmlFor="company">Company</label>
+              <input id="company" name="company" type="text" tabIndex={-1} autoComplete="off" />
             </div>
 
             <div>

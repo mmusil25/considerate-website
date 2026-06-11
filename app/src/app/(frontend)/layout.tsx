@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { DM_Sans, Source_Sans_3, Work_Sans } from 'next/font/google'
 import '../globals.css'
 import { SchemaInjector } from './components/SchemaInjector'
+import { Analytics } from './components/Analytics'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -65,6 +66,7 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
     >
       <head>
         <SchemaInjector />
+        <Analytics />
       </head>
       <body>{children}</body>
     </html>

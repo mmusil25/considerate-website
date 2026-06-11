@@ -89,3 +89,27 @@ variable "public_url" {
   description = "Public URL for the site. Auto-derived from domain_name or ALB DNS if left empty."
   default     = ""
 }
+
+variable "contact_notification_email" {
+  description = "Where contact-form submissions are emailed. In SES sandbox this address must complete identity verification (SES sends it a confirmation link)."
+  type        = string
+  default     = ""
+}
+
+variable "ses_region" {
+  description = "Region the app calls SES in. Defaults to aws_region; override when the verified identity lives elsewhere (e.g. a WorkMail-managed domain in us-east-1)."
+  type        = string
+  default     = ""
+}
+
+variable "analytics_domain" {
+  description = "data-domain for the Plausible-compatible analytics script. Empty disables analytics entirely."
+  type        = string
+  default     = ""
+}
+
+variable "analytics_script_src" {
+  description = "Override the analytics script URL (self-hosted Plausible/Umami). Empty uses Plausible Cloud's default script."
+  type        = string
+  default     = ""
+}

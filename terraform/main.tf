@@ -285,8 +285,12 @@ resource "aws_s3_bucket_cors_configuration" "assets" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["PUT", "POST", "GET", "HEAD"]
+    # Both apex and www serve the site (Route53 records for each), and the admin
+    # uploads video parts straight to S3 from whichever host the user is on — so
+    # both must be allowed origins or presigned PUTs fail CORS on the other host.
     allowed_origins = compact([
       local.public_url,
+      local.has_domain ? "https://www.${var.domain_name}" : "",
       "http://${aws_lb.main.dns_name}",
       "http://localhost:3000",
     ])
@@ -304,8 +308,31 @@ data "aws_cloudfront_origin_request_policy" "cors_s3" {
   name = "Managed-CORS-S3Origin"
 }
 
-data "aws_cloudfront_response_headers_policy" "cors" {
-  name = "Managed-SimpleCORS"
+# HLS CORS must be deterministic. The old Managed-SimpleCORS policy does NOT
+# override an ACAO header coming from S3, and Managed-CachingOptimized does not
+# put Origin in the cache key — so whichever origin's S3 CORS response got
+# cached first (apex, www, or no header at all) was replayed to every viewer,
+# breaking playback on the other host. These are public VOD assets: always
+# answer `Access-Control-Allow-Origin: *` and override whatever S3 said.
+resource "aws_cloudfront_response_headers_policy" "hls_cors" {
+  name    = "${var.app_name}-hls-cors"
+  comment = "Always ACAO * for public HLS assets (origin-independent cache)"
+
+  cors_config {
+    access_control_allow_credentials = false
+    origin_override                  = true
+
+    access_control_allow_origins {
+      items = ["*"]
+    }
+    access_control_allow_headers {
+      items = ["*"]
+    }
+    access_control_allow_methods {
+      items = ["GET", "HEAD", "OPTIONS"]
+    }
+    access_control_max_age_sec = 86400
+  }
 }
 
 # Origin Access Control — lets CloudFront sign (SigV4) its requests to S3 so the
@@ -358,7 +385,7 @@ resource "aws_cloudfront_distribution" "assets" {
 
     cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
     origin_request_policy_id   = data.aws_cloudfront_origin_request_policy.cors_s3.id
-    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.cors.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.hls_cors.id
 
     viewer_protocol_policy = "redirect-to-https"
   }
@@ -690,6 +717,16 @@ resource "aws_ecs_task_definition" "app" {
       { name = "ASSETS_CLOUDFRONT_DISTRIBUTION_ID", value = aws_cloudfront_distribution.assets.id },
       { name = "VIDEO_SOURCE_PREFIX", value = "videos/source/" },
       { name = "VIDEO_HLS_PREFIX", value = "videos/hls/" },
+      # --- Email (SES) ---
+      # From must be on the SES-verified domain (WorkMail-managed identity in
+      # SES_REGION — see ses.tf). Notifications go to CONTACT_NOTIFY_TO; in SES
+      # sandbox that must be a verified address (WorkMail mailboxes qualify).
+      { name = "SES_REGION", value = var.ses_region != "" ? var.ses_region : var.aws_region },
+      { name = "EMAIL_FROM", value = local.has_domain ? "noreply@${var.domain_name}" : "" },
+      { name = "CONTACT_NOTIFY_TO", value = var.contact_notification_email },
+      # --- Analytics (off until analytics_domain is set; cookieless, no banner) ---
+      { name = "ANALYTICS_DOMAIN", value = var.analytics_domain },
+      { name = "ANALYTICS_SCRIPT_SRC", value = var.analytics_script_src },
       # Shared secret the transcode Lambda uses to authenticate its completion
       # webhook. Same value is injected into the Lambda below.
       { name = "WEBHOOK_SECRET", value = random_password.webhook_secret.result },

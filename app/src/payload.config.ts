@@ -11,6 +11,7 @@ import SiteSettings from './collections/SiteSettings.ts'
 import Videos from './collections/Videos.ts'
 import Advisors from './collections/Advisors.ts'
 import Locations from './collections/Locations.ts'
+import ContactSubmissions from './collections/ContactSubmissions.ts'
 import { ALT_TEXT_IMAGE_DESCRIPTION } from './lib/altText.ts'
 import { purge } from './lib/revalidate.ts'
 
@@ -419,6 +420,7 @@ export default buildConfig({
     // CAPTRUST demo collections
     Advisors,
     Locations,
+    ContactSubmissions,
   ],
   db: postgresAdapter({
     pool: {

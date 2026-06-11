@@ -4,6 +4,11 @@
     "type": "string",
     "value": "considerate-site-alb-1090536380.us-east-2.elb.amazonaws.com"
   },
+  "app_cdn_domain": {
+    "sensitive": false,
+    "type": "string",
+    "value": "d24vtppwrpnxon.cloudfront.net"
+  },
   "app_name": {
     "sensitive": false,
     "type": "string",
@@ -13,6 +18,11 @@
     "sensitive": false,
     "type": "string",
     "value": "sg-04373940fad6e9956"
+  },
+  "aws_region": {
+    "sensitive": false,
+    "type": "string",
+    "value": "us-east-2"
   },
   "cloudfront_domain": {
     "sensitive": false,
