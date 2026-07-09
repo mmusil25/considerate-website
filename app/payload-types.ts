@@ -105,8 +105,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'cache-control': CacheControl;
+  };
+  globalsSelect: {
+    'cache-control': CacheControlSelect<false> | CacheControlSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -847,6 +851,55 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * Control how quickly content edits appear on the public site, and clear cached pages by hand.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cache-control".
+ */
+export interface CacheControl {
+  id: number;
+  /**
+   * What should happen to cached pages when an editor saves a document in each collection.
+   */
+  onSave?: {
+    /**
+     * Project pages, the project list, and the sitemap.
+     */
+    projects?: ('cdn' | 'origin' | 'none') | null;
+    /**
+     * Project pages that embed video clips.
+     */
+    videos?: ('cdn' | 'origin' | 'none') | null;
+    /**
+     * The CAPTRUST demo advisor and location directories.
+     */
+    advisors?: ('cdn' | 'origin' | 'none') | null;
+    /**
+     * The CAPTRUST demo location and advisor directories.
+     */
+    locations?: ('cdn' | 'origin' | 'none') | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cache-control_select".
+ */
+export interface CacheControlSelect<T extends boolean = true> {
+  onSave?:
+    | T
+    | {
+        projects?: T;
+        videos?: T;
+        advisors?: T;
+        locations?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

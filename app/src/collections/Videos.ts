@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { purge } from '../lib/revalidate'
+import { purgeByPolicy } from '../lib/revalidate'
 import { ALT_TEXT_VIDEO_DESCRIPTION } from '../lib/altText'
 
 /**
@@ -17,7 +17,12 @@ const Videos: CollectionConfig = {
   // We don't track which projects reference a clip, so purge them broadly.
   hooks: {
     afterChange: [
-      () => purge({ paths: ['/projects'], routes: ['/projects/[slug]'], cdn: ['/projects', '/projects/*'] }),
+      ({ req }) =>
+        purgeByPolicy(req.payload, 'videos', {
+          paths: ['/projects'],
+          routes: ['/projects/[slug]'],
+          cdn: ['/projects', '/projects/*'],
+        }),
     ],
   },
   admin: {

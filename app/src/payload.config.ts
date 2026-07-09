@@ -12,6 +12,7 @@ import Videos from './collections/Videos.ts'
 import Advisors from './collections/Advisors.ts'
 import Locations from './collections/Locations.ts'
 import ContactSubmissions from './collections/ContactSubmissions.ts'
+import CacheControl from './globals/CacheControl.ts'
 import { ALT_TEXT_IMAGE_DESCRIPTION } from './lib/altText.ts'
 import { purge } from './lib/revalidate.ts'
 
@@ -433,6 +434,7 @@ export default buildConfig({
     Locations,
     ContactSubmissions,
   ],
+  globals: [CacheControl],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL,

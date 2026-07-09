@@ -100,3 +100,37 @@ conventions; verified live in head links.
   hourly ISR revalidate runs server-side with DB access — project URLs join then.
 - A test submission "Deploy Verification / Live contact form test" + an earlier
   CLI test email are in WorkMail + the admin's Contact Submissions — safe to delete.
+
+## 6. Cache control settings (Settings → Cache) — built + verified locally, NOT yet deployed
+Why: advisor saved in prod admin didn't appear on /demos/financial/advisor —
+diagnosed as the two stale layers (Next ISR `revalidate=60` serving STALE +
+CloudFront `s-maxage=60` with ~1yr stale-while-revalidate). Data was fine
+(confirmed via /api/advisors). Page converged on its own after ~3 min.
+
+What was built (per Mark's request: fine-grain editor control + manual actions):
+- NEW global `cache-control` (`src/globals/CacheControl.ts`), admin group
+  "Settings", label "Cache":
+  - Manual actions (ui field → `CachePurgeButtons.tsx`): "Clear cache globally"
+    (revalidatePath('/','layout') + CloudFront `/*`) and "Clear cache for this
+    page" (path input w/ datalist of known pages). Backed by auth-guarded
+    endpoint POST `/api/globals/cache-control/purge` (401 without login).
+  - Per-collection on-save policy selects (projects/videos/advisors/locations):
+    'cdn' (full purge, DEFAULT = old hardwired behavior) | 'origin'
+    (revalidatePath only) | 'none' (timed expiry only).
+- `lib/revalidate.ts`: added `purgeEverything()` and `purgeByPolicy(payload,
+  collection, args)` (reads the global, falls back to full purge on error).
+- Advisors + Locations got afterChange/afterDelete hooks (both demo pages purge
+  together — the join field crosses them). Projects/Videos hooks now route
+  through purgeByPolicy (behavior unchanged at defaults). Media hook left
+  hardwired on purpose (assetsCdn re-crop invalidation must not be switchable).
+- Migration `20260611_141422_add_cache_control_global` (table cache_control +
+  4 enums) created + registered; types + importMap regenerated; tsc clean.
+
+Verified locally (dev server, push mode): admin screen renders under Settings,
+both buttons return {"ok":true,...}, endpoint 401s anonymously, policy select
+saves to DB, advisor save runs the hook without breaking the write
+(revalidatePath invariant error only occurs in standalone scripts — caught).
+
+TO DEPLOY: commit + scripts/deploy.sh (migration must run before the new admin
+screen is used in prod — same gate as always). Temp local test user removed;
+local cache_control row left at all-'cdn' defaults.

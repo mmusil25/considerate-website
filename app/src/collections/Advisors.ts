@@ -1,10 +1,24 @@
 import type { CollectionConfig } from 'payload'
+import { purgeByPolicy } from '../lib/revalidate'
+
+// Both demo directory pages refresh together: the location page lists advisors
+// through its `employees` join, so an advisor edit changes both.
+const DEMO_PAGES = {
+  paths: ['/demos/financial/advisor', '/demos/financial/location'],
+  cdn: ['/demos/financial/advisor', '/demos/financial/location'],
+}
 
 // CAPTRUST demo — a financial advisor. References a single office `location`;
 // the Locations collection reads this back via its `employees` join field.
 const Advisors: CollectionConfig = {
   slug: 'advisors',
   auth: false,
+  // Refresh the live directory pages on save/delete, per the editor-chosen
+  // policy in Settings → Cache (cache-control global).
+  hooks: {
+    afterChange: [({ req }) => purgeByPolicy(req.payload, 'advisors', DEMO_PAGES)],
+    afterDelete: [({ req }) => purgeByPolicy(req.payload, 'advisors', DEMO_PAGES)],
+  },
   admin: {
     useAsTitle: 'lastName',
     defaultColumns: ['firstName', 'lastName', 'location'],

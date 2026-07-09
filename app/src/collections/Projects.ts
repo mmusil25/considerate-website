@@ -1,22 +1,23 @@
 import type { CollectionConfig } from 'payload'
-import { purge } from '../lib/revalidate'
+import { purgeByPolicy } from '../lib/revalidate'
 
 const Projects: CollectionConfig = {
   slug: 'projects',
   auth: false,
   // Refresh the live (edge-cached) pages when a project is saved or removed, so
   // edits show up without waiting for the CDN's stale-while-revalidate window.
+  // How aggressively is editor-configurable in Settings → Cache (cache-control).
   hooks: {
     afterChange: [
-      ({ doc }) =>
-        purge({
+      ({ doc, req }) =>
+        purgeByPolicy(req.payload, 'projects', {
           paths: [`/projects/${doc.slug}`, '/projects', '/sitemap.xml'],
           cdn: [`/projects/${doc.slug}`, '/projects', '/sitemap.xml'],
         }),
     ],
     afterDelete: [
-      ({ doc }) =>
-        purge({
+      ({ doc, req }) =>
+        purgeByPolicy(req.payload, 'projects', {
           paths: ['/projects', '/sitemap.xml'],
           routes: ['/projects/[slug]'],
           cdn: [`/projects/${doc.slug}`, '/projects', '/sitemap.xml'],

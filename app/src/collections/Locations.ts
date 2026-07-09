@@ -1,4 +1,12 @@
 import type { CollectionConfig } from 'payload'
+import { purgeByPolicy } from '../lib/revalidate'
+
+// Both demo directory pages refresh together: advisor cards link their office,
+// so a location edit changes both.
+const DEMO_PAGES = {
+  paths: ['/demos/financial/advisor', '/demos/financial/location'],
+  cdn: ['/demos/financial/advisor', '/demos/financial/location'],
+}
 
 // CAPTRUST demo — an office location. Advisors point at a location via their
 // `location` relationship; the `employees` join below reads that back so a
@@ -6,6 +14,12 @@ import type { CollectionConfig } from 'payload'
 const Locations: CollectionConfig = {
   slug: 'locations',
   auth: false,
+  // Refresh the live directory pages on save/delete, per the editor-chosen
+  // policy in Settings → Cache (cache-control global).
+  hooks: {
+    afterChange: [({ req }) => purgeByPolicy(req.payload, 'locations', DEMO_PAGES)],
+    afterDelete: [({ req }) => purgeByPolicy(req.payload, 'locations', DEMO_PAGES)],
+  },
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'address'],
