@@ -43,20 +43,25 @@ export default async function HomePage() {
             margin: '0 auto 40px',
           }}
         >
-          Considerate Systems LLC is a single member engineering consulting firm
-          owned and operated by Mark Musil. I specialize in embedded systems,
-          firmware, electrical engineering, web development, and DevOps — a
-          complete technical partner from prototype to deployment.
+          Considerate Systems LLC is the independent engineering practice of
+          Mark Musil. I take on a limited number of engagements at a time and
+          work across the full product surface — embedded systems, firmware,
+          electrical design, web platforms, and cloud infrastructure — carrying
+          work from first prototype to deployed, maintained product.
           <br />
           <br />
-          I maintain a dedicated electronics and prototyping facility for rapid
-          development, and offer hourly, retainer, and fixed-price engagements
-          to fit your project&apos;s scope. Hourly engagements typically start
-          at $120/hr.
+          Every engagement is scoped and quoted individually, priced against
+          the outcome rather than the hour. I maintain a dedicated electronics
+          and prototyping facility, so hardware iterations happen in days, not
+          weeks.
           <br />
           <br />
-          Browse past work below (shared with permission), then schedule a
-          meeting or reach out through the contact form.
+          Selected work is below, shared with permission. If your project calls
+          for this level of attention,{' '}
+          <Link href="/contact" style={{ color: '#185FA5', textDecoration: 'underline' }}>
+            request a quote
+          </Link>
+          .
         </p>
 
         <div style={{ margin: '0 auto 24px', width: 'fit-content' }}>
