@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from './components/SiteHeader'
 import { NavMenu } from './components/NavMenu'
+import { LinkedInBadge } from './components/LinkedInBadge'
 import type { Project } from '../../../payload-types'
 
 // ISR so CloudFront can edge-cache the homepage while still picking up CMS
@@ -78,6 +79,24 @@ export default async function HomePage() {
             priority
             style={{ display: 'block', objectFit: 'cover' }}
           />
+        </div>
+
+        <h2
+          style={{
+            fontFamily: "'Work Sans', sans-serif",
+            fontSize: '16px',
+            fontWeight: 500,
+            color: '#185FA5',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            textAlign: 'center',
+            margin: '32px 0 0',
+          }}
+        >
+          Reach out to me on LinkedIn
+        </h2>
+        <div style={{ width: 'fit-content', margin: '12px auto 0' }}>
+          <LinkedInBadge />
         </div>
 
         {featured.length > 0 && (
