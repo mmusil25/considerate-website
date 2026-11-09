@@ -15,8 +15,8 @@ the running app to save money, then hand-edited:
 The Raspberry Pi `marksraspi` serves it from
 `/mnt/ssd/marksraspi/sites/consideratesystems/public` through the Pi's shared
 Caddy (the one in `/opt/crm`, from the Contract-Relationship-Account-Manager
-repo), which imports this folder's `Caddyfile`. DNS is Cloudflare, with the apex
-and www pointing at the home IP. Until 2026-11-08 it was S3 + CloudFront.
+repo), which imports this folder's `Caddyfile`. DNS is Cloudflare with the proxy on
+(SSL Full strict) for the apex and www; the origin is the home IP. Until 2026-11-08 it was S3 + CloudFront.
 
 `public/videos/` is not in git; see `deploy.sh`.
 
@@ -25,3 +25,7 @@ and www pointing at the home IP. Until 2026-11-08 it was S3 + CloudFront.
 Its database was on RDS and was deleted with no snapshot when the site went
 static, so the CMS content is gone. Running the app again means re-entering the
 projects and pages, using these HTML files as the source.
+
+Mail for @consideratesystems.com is Cloudflare Email Routing: a catch-all
+forwards everything to mark.r.musil@gmail.com (free). Until 2026-11-08 it was
+Amazon WorkMail + SES; the mailbox export is in the PC backups.
