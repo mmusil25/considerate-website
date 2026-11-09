@@ -5,7 +5,7 @@
 # and in the PC backups, and --exclude keeps rsync --delete from removing it.
 set -euo pipefail
 HOST="${PI_HOST:-marksraspi}"
-DEST=/mnt/ssd/marksraspi/sites/consideratesystems
+DEST=/opt/sites/consideratesystems
 cd "$(dirname "$0")"
 rsync -az --delete --exclude 'videos/' public/ "${HOST}:${DEST}/public/"
 rsync -az Caddyfile "${HOST}:${DEST}/Caddyfile"

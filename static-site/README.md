@@ -13,7 +13,7 @@ the running app to save money, then hand-edited:
 ## Hosting
 
 The Raspberry Pi `marksraspi` serves it from
-`/mnt/ssd/marksraspi/sites/consideratesystems/public` through the Pi's shared
+`/opt/sites/consideratesystems/public` through the Pi's shared
 Caddy (the one in `/opt/crm`, from the Contract-Relationship-Account-Manager
 repo), which imports this folder's `Caddyfile`. DNS is Cloudflare with the proxy on
 (SSL Full strict) for the apex and www; the origin is the home IP. Until 2026-11-08 it was S3 + CloudFront.
