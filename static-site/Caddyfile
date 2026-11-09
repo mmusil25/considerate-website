@@ -8,6 +8,10 @@ consideratesystems.com {
 	try_files {path} {path}.html {path}/index.html
 	file_server
 	header /_next/static/* Cache-Control "public, max-age=31536000, immutable"
+	# Pages are edited in place, so browsers must recheck them on every visit;
+	# without this they guessed a cache lifetime and kept showing old pages.
+	@pages not path /_next/static/* /img/* /videos/* *.svg *.ico
+	header @pages Cache-Control "no-cache"
 }
 
 www.consideratesystems.com {
