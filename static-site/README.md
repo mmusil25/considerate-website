@@ -5,7 +5,7 @@ of the Payload/Next app in `app/`, taken on 2026-11-02 when the site moved off
 the running app to save money, then hand-edited:
 
 - 2026-11-08: the top nav (Home / Services / Projects / About / Contact) was
-  replaced on every page by the contact line: mark.r.musil@gmail.com and
+  replaced on every page by the contact line: mark@consideratesystems.com and
   (740) 703-2110. The other pages are still reachable from the home page.
 
 **Edit the HTML in `public/` directly, then run `./deploy.sh`** (from the LAN).
