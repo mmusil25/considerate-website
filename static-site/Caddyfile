@@ -1,0 +1,15 @@
+# consideratesystems.com - static site (exported from the Payload/Next app on 2026-11-02).
+# Files: /mnt/ssd/marksraspi/sites/consideratesystems/public on the Pi.
+
+consideratesystems.com {
+	root * /srv/sites/consideratesystems/public
+	encode zstd gzip
+	# Pages are saved as about.html etc.; serve them at /about.
+	try_files {path} {path}.html {path}/index.html
+	file_server
+	header /_next/static/* Cache-Control "public, max-age=31536000, immutable"
+}
+
+www.consideratesystems.com {
+	redir https://consideratesystems.com{uri} permanent
+}

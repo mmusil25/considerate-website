@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- The checkmark from logo.svg (symbol group), scaled ~1.6x to fill the
+       favicon canvas and stroked heavier so it stays legible at 16px. -->
+  <path d="M4.8,27.2 L17.6,40 L43.2,8"
+    fill="none"
+    stroke="#185FA5"
+    stroke-width="5.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+</svg>
