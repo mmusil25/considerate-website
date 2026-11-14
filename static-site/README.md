@@ -8,7 +8,7 @@ the running app to save money, then hand-edited:
   replaced on every page by the contact line: mark@consideratesystems.com and
   (740) 703-2110. The other pages are still reachable from the home page.
 
-**Edit the HTML in `public/` directly, then run `./deploy.sh`** (from the LAN).
+**Pages made by `src/build.py` (homepage, /engineering, /handyman/*) are generated; edit build.py, not the HTML.** Other pages: edit the HTML in `public/` directly. Then run `./deploy.sh` (from the LAN), which rebuilds first and refuses to run while `LAUNCH_HOLD` exists. LAN-only preview: `./preview-lan.sh`.
 
 ## Hosting
 

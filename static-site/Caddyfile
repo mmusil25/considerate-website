@@ -5,6 +5,17 @@ consideratesystems.com {
 	root * /srv/sites/consideratesystems/public
 	encode zstd gzip
 	# Pages are saved as about.html etc.; serve them at /about.
+	# Handyman photo-quote form -> intake service (Handman-services repo, /opt/handyman on the Pi).
+	handle /api/* {
+		request_body {
+			max_size 60MB
+		}
+		# Cloudflare proxies this site, so the visitor's IP is in CF-Connecting-IP
+		# (used only for the form's per-IP rate limit).
+		reverse_proxy handyman-intake:8000 {
+			header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+		}
+	}
 	try_files {path} {path}.html {path}/index.html
 	file_server
 	header /_next/static/* Cache-Control "public, max-age=31536000, immutable"

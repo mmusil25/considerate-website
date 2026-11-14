@@ -7,6 +7,12 @@ set -euo pipefail
 HOST="${PI_HOST:-marksraspi}"
 DEST=/opt/sites/consideratesystems
 cd "$(dirname "$0")"
+if [[ -f LAUNCH_HOLD ]]; then
+  echo "Refusing to publish: LAUNCH_HOLD is present." >&2
+  cat LAUNCH_HOLD >&2
+  exit 1
+fi
+python3 -I src/build.py
 rsync -az --delete --exclude 'videos/' public/ "${HOST}:${DEST}/public/"
 rsync -az Caddyfile "${HOST}:${DEST}/Caddyfile"
 ssh "$HOST" 'docker exec crm-caddy-1 caddy reload --config /etc/caddy/Caddyfile'
